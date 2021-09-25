@@ -19,6 +19,11 @@ def sokoban_goal_state(state):
       return False
   return True
 
+def manhattan_distance(x, y):
+  # Manhattan distance: given x = (x0, x1) and y = (y0, y1), the Manhattan distance d(x, y) = abs(x0 - y0) + abs(x1 - y1)
+  distance = abs(x[0] - y[0]) + abs(x[1] - y[1])
+  return distance
+
 def heur_manhattan_distance(state):
 #IMPLEMENT
     '''admissible sokoban puzzle heuristic: manhattan distance'''
@@ -30,7 +35,24 @@ def heur_manhattan_distance(state):
     #When calculating distances, assume there are no obstacles on the grid.
     #You should implement this heuristic function exactly, even if it is tempting to improve it.
     #Your function should return a numeric value; this is the estimate of the distance to the goal.
-    return 0
+
+    manhattan_distance_sum = 0
+
+    for box in state.boxes:
+      distances = []
+
+      # calculate distance from this box to all storage points, keeping track of all distances
+      for storage_point in state.storage:
+        distance = manhattan_distance(box, storage_point) 
+        distances.append(distance)
+      
+      # search for the closest storage_point to this box by looking for the smallest distance in distances
+      min_distance = min(distances)
+
+      # append the shortest distance to the running sum
+      manhattan_distance_sum += min_distance
+    
+    return manhattan_distance_sum
 
 
 #SOKOBAN HEURISTICS
