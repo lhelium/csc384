@@ -115,4 +115,21 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
   '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
   '''OUTPUT: A goal state (if a goal is found), else False'''
   '''implementation of anytime greedy best-first search'''
+  start_time = os.times()[0]
+  end_time = start_time + timebound
+  time_remaining = timebound
+
+  gbfs_search_engine = SearchEngine(strategy='best_first', cc_level='full')
+  gbfs_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=None)
+  gbfs_costbound = (float("inf"), float("inf"), float("inf")) # [prune states based on g-value, prune states based on h-value, prune states based on f-value]
+
+  while time_remaining > 0:
+    # as long as we haven't run out of time, search
+    final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
+
+    # since we called gbfs, subtract os.times()[0] from the time_remaining
+    time_remaining -= os.times()[0]
+
+    if final_state:
+      gbfs_costbound = (final_state.gval, float("inf"), float("inf"))
   return False
