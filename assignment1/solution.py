@@ -107,6 +107,11 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
   '''OUTPUT: A goal state (if a goal is found), else False'''
   '''implementation of anytime weighted astar algorithm'''
 
+  # need to implement f-value function
+
+  astar_search_engine = SearchEngine(strategy='custom', cc_level='full')
+  astar_search_engine.init_search(initial_state=initial_state, goal=)
+
   return False
 
 def anytime_gbfs(initial_state, heur_fn, timebound = 10):
@@ -121,6 +126,8 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
 
   gbfs_search_engine = SearchEngine(strategy='best_first', cc_level='full')
   gbfs_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=None)
+
+  # initialize pruning g-value to infinity to make sure pruning happens in the first iteration
   gbfs_costbound = (float("inf"), float("inf"), float("inf")) # [prune states based on g-value, prune states based on h-value, prune states based on f-value]
 
   while time_remaining > 0:
@@ -131,5 +138,13 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
     time_remaining -= os.times()[0]
 
     if final_state:
+      # if there exists a final state, then there exists a ndode with g(node) greater than the best path
+      # prune the node by updating the gval in costbound
       gbfs_costbound = (final_state.gval, float("inf"), float("inf"))
+    else:
+      # no nodes with g-value = g(node) lower than the previous g-value can be found
+      # so the current g-value is the lowest g-value
+      # therefore the algorithm has expanded all non-pruned nodes and found the best/optimal solution
+      return True
+
   return False
