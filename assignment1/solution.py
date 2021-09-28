@@ -114,8 +114,52 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
 
   astar_search_engine = SearchEngine(strategy='custom', cc_level='full')
   astar_search_engine.init_search(initial_state=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=wrapped_fval_function)
+  
+  # initialize pruning values to infinity to make sure pruning happens in the first iteration
+  astar_costbound = (float("inf"), float("inf"), float("inf"))
 
-  return False
+  # initialize the timekeeping variables
+  start_time = os.times()[0]
+  time_remaining = timebound
+
+  # run A* once to get a solution
+  final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
+  if not final_state:
+    best_solution = False
+  else:
+    best_solution = final_state
+
+  while time_remaining > 0:
+    # if the search doesn't return anything, return from the function
+    if not final_state:
+      return best_solution
+    
+    # only search if current solution's gval+hval is less than the gval specified in costbound
+    if (final_state.gval + final_state.hval) < astar_costbound[0]:
+      # deduct search time from the time remaining and reset start_time counter
+      search_time = os.times()[0] - start_time
+      time_remaining -= search_time
+      start_time = os.times()
+
+      # update costbound to reflect the new g_value to prune with
+      astar_costbound = (final_state.gval, float("inf"), float("inf"))
+
+      # save the most recent result (which is also the best result)
+      best_solution = final_state
+    
+    else:
+      # gbfs couldn't find a path with lower gval than the gval of the previous search iteration
+      # so best_solution is indeed the best solution
+      return best_solution
+    
+    #decrease_weight = 0.8
+    #weight *= decrease_weight
+    # I think the weight should be decreased each time but no function takes in the weight after the init_search function?
+    # So how do you actually decrease the weight in each iteration?
+
+    final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
+
+  return best_solution
 
 def anytime_gbfs(initial_state, heur_fn, timebound = 10):
 #IMPLEMENT
@@ -128,7 +172,7 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
   gbfs_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=None)
 
   # initialize pruning g_value to infinity to make sure pruning happens in the first iteration
-  gbfs_costbound = (float("inf"), float("inf"), float("inf")) # [prune states based on g_value, prune states based on h_value, prune states based on f_value]
+  gbfs_costbound = (float("inf"), float("inf"), float("inf"))
 
   # initialize the timekeeping variables
   start_time = os.times()[0]
@@ -136,7 +180,10 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
 
   # run gbfs once to get a solution, save the solution as the best solution encountered so far
   final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
-  best_solution = final_state
+  if not final_state:
+    best_solution = False
+  else:
+    best_solution = final_state
 
   while time_remaining > 0:
     # if the search doesn't return anything, return from the function
@@ -163,4 +210,4 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
     
     final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
 
-  return False
+  return best_solution
