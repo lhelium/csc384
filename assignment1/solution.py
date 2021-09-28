@@ -98,7 +98,9 @@ def fval_function(sN, weight):
     #The function must return a numeric f-value.
     #The value will determine your state's position on the Frontier list during a 'custom' search.
     #You must initialize your search engine object as a 'custom' search engine if you supply a custom fval function.
-    return 0
+
+    fval = sN.gval + (weight * sN.hval)
+    return fval
 
 def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
 #IMPLEMENT
@@ -110,7 +112,7 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
   # need to implement f-value function
 
   astar_search_engine = SearchEngine(strategy='custom', cc_level='full')
-  astar_search_engine.init_search(initial_state=initial_state, goal=)
+  astar_search_engine.init_search(initial_state=initial_state)
 
   return False
 
