@@ -61,11 +61,71 @@ def trivial_heuristic(state):
   '''trivial admissible sokoban heuristic'''
   '''INPUT: a sokoban state'''
   '''OUTPUT: a numeric value that serves as an estimate of the distance of the state (# of moves required to get) to the goal.'''
+
+  # number of boxes that aren't in a storage position (ie: number of boxes which have yet to be moved)
   count = 0
   for box in state.boxes:
     if box not in state.storage:
         count += 1
   return count
+
+# NOTE THAT ONLY BOXES CAN BE STUCK, robots can move in the backwards direction 
+# NEED TO DECIDE: do you want to call this function with only state (ie: call it once only)
+# or call it for every box
+# also decide if you want to keep changing_obstacles bc idk if it's actually doing anything
+def box_is_stuck(state, box, obstacles, changing_obstacles):
+  # A box is stuck if it's either cornered or on the edge with no storage boxes located on that edge
+
+  # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
+  # Therefore, if a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
+  # Because you can't get the box back towards the center of the board
+
+  cornered = is_cornered(box, obstacles, changing_obstacles)
+
+  edged_out = has_storage_on_x(state, box) or has_storage_on_y(state, box)
+
+  if edged_out or cornered:
+    return True
+  else:
+    return False
+
+def is_cornered(loc, obstacles, changing_obstacles):
+  # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
+  # A 'corner' is defined as the a location where the only other free spot is located diagonally across from the current state
+
+  if (loc[0] + 1, loc[1]) in obstacles or (loc[0] + 1, loc[1]) in changing_obstacles:
+    if (loc[0], loc[1] + 1) in obstacles or (loc[0], loc[1] + 1) in changing_obstacles: # upper-left corner
+      return True
+    elif (loc[0], loc[1] - 1) in obstacles or (loc[0], loc[1] - 1) in changing_obstacles: # lower left corner
+      return True
+    else:
+      return False
+  
+  if (loc[0] - 1, loc[1]) in obstacles or (loc[0] - 1, loc[1]) in changing_obstacles:
+    if (loc[0], loc[1] + 1) in obstacles or (loc[0], loc[1] + 1) in changing_obstacles: # upper-right corner
+      return True
+    elif (loc[0], loc[1] - 1) in obstacles or (loc[0], loc[1] - 1) in changing_obstacles: # lower-right corner
+      return True
+    else:
+      return False
+  
+def has_storage_on_x(state, box):
+  storage_points = state.storage()
+  for storage in storage_points:
+    # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (left or right)
+    if storage[0] == box[0]:
+      return True
+
+    return False
+
+def has_storage_on_y(state, box):
+  storage_points = state.storage()
+  for storage in storage_points:
+    # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (top or bottom)
+    if storage[1] == box[1]:
+      return True
+
+    return False
 
 def heur_alternate(state):
 #IMPLEMENT
@@ -75,7 +135,64 @@ def heur_alternate(state):
     #heur_manhattan_distance has flaws.
     #Write a heuristic function that improves upon heur_manhattan_distance to estimate distance between the current state and the goal.
     #Your function should return a numeric value for the estimate of the distance to the goal.
-    return 0
+
+    count = 0
+    unstored_boxes = state.boxes - state.storage
+    available_storage = state.storage - state.boxes
+
+    # Find the location of the obstacles
+    # Obstacles include: boundaries of the board, other robots (added dynamically), other boxes (added dynamically), actual obstacles themselves
+    obstacles = [] 
+
+    for x in range(-1, state.width + 1):
+      obstacles.append((x, -1)) # upper wall
+      obstacles.append((x, state.height + 1)) # lower wall
+
+    for y in range(state.height):
+      obstacles.append((-1, y)) # left wall
+      obstacles.append(state.width + 1, y) # right wall
+    
+    for obstacle in state.obstacles:
+      obstacles.append(obstacle)
+
+    # total cost of optimal path for robot r to move box b to storage point s = cost of optimal path from r to b + cost of optimal path from b to s
+    # Split the problem into:
+    # 1. Finding the cost of the path from every robot to every box
+    # 2. Finding the cost of the path from every box to every storage point
+
+    # Let the path from start to goal be represented as: start -> next -> ... -> goal
+    # Assumption: if start -> next is legal (ie: next isn't an obstacle) and admissible (ie: next isn't cornered in), then every move from next -> goal is legal and admissible
+
+    # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
+    # Therefore, if a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
+
+    # 1. Finding the cost of the path from every robot to every box
+    rb_cost = 0
+    for robot in state.robots:
+      dist_from_box = []
+      for box in unstored_boxes:
+        changing_obstacles = (state.robots - robot) + (state.boxes - state.storage - box)
+        if box_is_stuck(state, box, obstacles, changing_obstacles):
+          rb_cost += 1000
+        else:
+          distance = abs(box[0] - robot[0]) + abs(box[1] - robot[1])
+          dist_from_box.append(distance)
+      
+      min_distance = min(dist_from_box)
+      rb_cost += min_distance
+    
+    # 2. Finding the cost of the path from every box to every storage point
+    bs_cost = 0
+    for box in unstored_boxes:
+      dist_from_box = []
+      for storage in available_storage:
+        distance = abs(box[0] - storage[0]) + abs(box[1] - storage[1])
+        dist_from_box[storage] = distance
+      
+      min_distance = min(dist_from_box)
+      bs_cost += min_distance
+
+    return count
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
