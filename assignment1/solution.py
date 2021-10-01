@@ -69,63 +69,80 @@ def trivial_heuristic(state):
         count += 1
   return count
 
-# NOTE THAT ONLY BOXES CAN BE STUCK, robots can move in the backwards direction 
-# NEED TO DECIDE: do you want to call this function with only state (ie: call it once only)
-# or call it for every box
-# also decide if you want to keep changing_obstacles bc idk if it's actually doing anything
-def box_is_stuck(state, box, obstacles, changing_obstacles):
-  # A box is stuck if it's either cornered or on the edge with no storage boxes located on that edge
-
-  # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
-  # Therefore, if a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
-  # Because you can't get the box back towards the center of the board
-
-  cornered = is_cornered(box, obstacles, changing_obstacles)
-
-  edged_out = has_storage_on_x(state, box) or has_storage_on_y(state, box)
-
-  if edged_out or cornered:
-    return True
-  else:
-    return False
-
-def is_cornered(loc, obstacles, changing_obstacles):
-  # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
+def is_cornered(loc, obstacles):
   # A 'corner' is defined as the a location where the only other free spot is located diagonally across from the current state
 
-  if (loc[0] + 1, loc[1]) in obstacles or (loc[0] + 1, loc[1]) in changing_obstacles:
-    if (loc[0], loc[1] + 1) in obstacles or (loc[0], loc[1] + 1) in changing_obstacles: # upper-left corner
+  if (loc[0] + 1, loc[1]) in obstacles:
+    if (loc[0], loc[1] + 1) in obstacles: # upper-left corner
       return True
-    elif (loc[0], loc[1] - 1) in obstacles or (loc[0], loc[1] - 1) in changing_obstacles: # lower left corner
-      return True
-    else:
-      return False
-  
-  if (loc[0] - 1, loc[1]) in obstacles or (loc[0] - 1, loc[1]) in changing_obstacles:
-    if (loc[0], loc[1] + 1) in obstacles or (loc[0], loc[1] + 1) in changing_obstacles: # upper-right corner
-      return True
-    elif (loc[0], loc[1] - 1) in obstacles or (loc[0], loc[1] - 1) in changing_obstacles: # lower-right corner
+    elif (loc[0], loc[1] - 1) in obstacles: # lower left corner
       return True
     else:
       return False
   
-def has_storage_on_x(state, box):
+  if (loc[0] - 1, loc[1]) in obstacles:
+    if (loc[0], loc[1] + 1) in obstacles: # upper-right corner
+      return True
+    elif (loc[0], loc[1] - 1) in obstacles: # lower-right corner
+      return True
+    else:
+      return False
+  
+def has_storage_on_edge(state, box, axis):
   storage_points = state.storage()
+  
   for storage in storage_points:
-    # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (left or right)
-    if storage[0] == box[0]:
-      return True
+    if axis == "x":
+      # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (left or right)
+      if storage[0] == box[0]:
+        return True
+    elif axis == "y":
+      # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (top or bottom)
+      if storage[1] == box[1]:
+        return True
 
     return False
-
+""" 
 def has_storage_on_y(state, box):
   storage_points = state.storage()
   for storage in storage_points:
-    # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (top or bottom)
+    
     if storage[1] == box[1]:
       return True
 
-    return False
+    return False """
+
+def box_is_stuck(state, obstacles):
+  # Note: only boxes can be stuck
+  unstored_boxes = state.boxes - state.storage
+
+  stuck = False
+
+  for box in unstored_boxes:
+    if stuck:
+      return True
+
+    # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
+    cornered = is_cornered(box, obstacles)
+
+    # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
+    # If a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
+    # Because you can't get the box back towards the center of the board
+    storage_available_on_x = None
+    storage_available_on_y = None
+
+    if box[0] == 0 or box[0] == state.width - 1:
+      storage_available_on_x = has_storage_on_edge(state, box, "x")
+    elif box[1] == 0 or box[1] == state.height - 1:
+      storage_available_on_y = has_storage_on_edge(state, box, "y")
+    else:
+      storage_available_on_x = True
+      storage_available_on_y = True
+
+    if cornered or not storage_available_on_x or not storage_available_on_y:
+      stuck = True
+
+  return False
 
 def heur_alternate(state):
 #IMPLEMENT
@@ -154,29 +171,25 @@ def heur_alternate(state):
     
     for obstacle in state.obstacles:
       obstacles.append(obstacle)
+    
+    # Check if the current state is "stuck"
+    # A box is stuck if it's either cornered or on the edge with no storage boxes located on that edge
+    if box_is_stuck(state, obstacles):
+      # A "stuck" position isn't ideal, so set the cost to be high
+      count += 1000
 
     # total cost of optimal path for robot r to move box b to storage point s = cost of optimal path from r to b + cost of optimal path from b to s
     # Split the problem into:
     # 1. Finding the cost of the path from every robot to every box
     # 2. Finding the cost of the path from every box to every storage point
 
-    # Let the path from start to goal be represented as: start -> next -> ... -> goal
-    # Assumption: if start -> next is legal (ie: next isn't an obstacle) and admissible (ie: next isn't cornered in), then every move from next -> goal is legal and admissible
-
-    # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
-    # Therefore, if a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
-
     # 1. Finding the cost of the path from every robot to every box
     rb_cost = 0
     for robot in state.robots:
       dist_from_box = []
       for box in unstored_boxes:
-        changing_obstacles = (state.robots - robot) + (state.boxes - state.storage - box)
-        if box_is_stuck(state, box, obstacles, changing_obstacles):
-          rb_cost += 1000
-        else:
-          distance = abs(box[0] - robot[0]) + abs(box[1] - robot[1])
-          dist_from_box.append(distance)
+        distance = abs(box[0] - robot[0]) + abs(box[1] - robot[1])
+        dist_from_box.append(distance)
       
       min_distance = min(dist_from_box)
       rb_cost += min_distance
@@ -226,6 +239,7 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
   '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
   '''OUTPUT: A goal state (if a goal is found), else False'''
   '''implementation of anytime weighted astar algorithm'''
+  decrease_weight = 0.8
 
   wrapped_fval_function = (lambda sN : fval_function(sN, weight))
 
@@ -243,6 +257,7 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
   final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
   if not final_state:
     best_solution = False
+    return best_solution
   else:
     best_solution = final_state
 
@@ -251,30 +266,33 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
     if not final_state:
       return best_solution
     
+    final_state_hval = heur_fn(final_state)
+    final_state_fval = final_state.gval + final_state_hval
+
     # only search if current solution's gval+hval is less than the gval specified in costbound
-    if (final_state.gval + final_state.hval) < astar_costbound[0]:
+    if final_state_fval < astar_costbound[2]:
       # deduct search time from the time remaining and reset start_time counter
       search_time = os.times()[0] - start_time
       time_remaining -= search_time
-      start_time = os.times()
 
       # update costbound to reflect the new g_value to prune with
-      astar_costbound = (final_state.gval, float("inf"), float("inf"))
+      astar_costbound = (float("inf"), float("inf"), final_state_fval)
 
       # save the most recent result (which is also the best result)
       best_solution = final_state
+      
+      # I think the weight should be decreased each time but no function takes in the weight after the init_search function?
+      # So how do you actually decrease the weight in each iteration?
+      weight *= decrease_weight
+
+      # prepare to run the search again with the updated costbound
+      start_time = os.times()
+      final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
     
     else:
       # gbfs couldn't find a path with lower gval than the gval of the previous search iteration
       # so best_solution is indeed the best solution
       return best_solution
-    
-    #decrease_weight = 0.8
-    #weight *= decrease_weight
-    # I think the weight should be decreased each time but no function takes in the weight after the init_search function?
-    # So how do you actually decrease the weight in each iteration?
-
-    final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
 
   return best_solution
 
@@ -299,6 +317,7 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
   final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
   if not final_state:
     best_solution = False
+    return best_solution
   else:
     best_solution = final_state
 
@@ -312,19 +331,21 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
       # deduct search time from the time remaining and reset start_time counter
       search_time = os.times()[0] - start_time
       time_remaining -= search_time
-      start_time = os.times()
+      
 
       # update costbound to reflect the new g_value to prune with
       gbfs_costbound = (final_state.gval, float("inf"), float("inf"))
 
       # save the most recent result (which is also the best result)
       best_solution = final_state
+
+      # prepare to run the search again with the updated costbound
+      start_time = os.times()
+      final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
     
     else:
       # gbfs couldn't find a path with lower gval than the gval of the previous search iteration
       # so best_solution is indeed the best solution
       return best_solution
-    
-    final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
-
+      
   return best_solution
