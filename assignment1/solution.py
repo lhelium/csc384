@@ -1,4 +1,4 @@
-#   Look for #IMPLEMENT tags in this file. These tags indicate what has
+ #   Look for #IMPLEMENT tags in this file. These tags indicate what has
 #   to be implemented to complete the warehouse domain.
 
 #   You may add only standard python imports---i.e., ones that are automatically
@@ -25,7 +25,7 @@ def manhattan_distance(x, y):
   distance = abs(x[0] - y[0]) + abs(x[1] - y[1])
   return distance
 
-def heur_manhattan_distance(state):
+def heur_manhattan_distance(state): # autograder.py: 20/20
 #IMPLEMENT
     '''admissible sokoban puzzle heuristic: manhattan distance'''
     '''INPUT: a sokoban state'''
@@ -38,8 +38,10 @@ def heur_manhattan_distance(state):
     #Your function should return a numeric value; this is the estimate of the distance to the goal.
 
     manhattan_distance_sum = 0
+    
+    unstored_boxes = state.boxes - state.storage
 
-    for box in state.boxes:
+    for box in unstored_boxes:
       distances = []
 
       # calculate distance from this box to all storage points, keeping track of all distances
@@ -69,28 +71,40 @@ def trivial_heuristic(state):
         count += 1
   return count
 
-def is_cornered(loc, obstacles):
-  # A 'corner' is defined as the a location where the only other free spot is located diagonally across from the current state
+def is_cornered(box, xmax, ymax):
+    # Check if the box is on the corners of the game board
+    
+    if (box[0] == 0 and box[1] == 0) or \
+       (box[0] == 0 and box[1] == ymax - 1) or \
+       (box[0] == xmax - 1 and box[1] == 0) or \
+       (box[0] == xmax - 1 and box[1] == ymax - 1): 
+           return True
+    else:
+        return False
 
+def is_pseudo_cornered(loc, obstacles):
+  # A 'pseudo-corner' is defined as the a location where the only other free spot is located diagonally across from the current state
+    
   if (loc[0] + 1, loc[1]) in obstacles:
-    if (loc[0], loc[1] + 1) in obstacles: # upper-left corner
+    if (loc[0], loc[1] + 1) in obstacles: # box is in upper-left corner
       return True
-    elif (loc[0], loc[1] - 1) in obstacles: # lower left corner
+    elif (loc[0], loc[1] - 1) in obstacles: # box is in lower left corner
       return True
     else:
       return False
   
   if (loc[0] - 1, loc[1]) in obstacles:
-    if (loc[0], loc[1] + 1) in obstacles: # upper-right corner
+    if (loc[0], loc[1] + 1) in obstacles: # box is in upper-right corner
       return True
-    elif (loc[0], loc[1] - 1) in obstacles: # lower-right corner
+    elif (loc[0], loc[1] - 1) in obstacles: # box is in lower-right corner
       return True
     else:
       return False
   
 def has_storage_on_edge(state, box, axis):
-  storage_points = state.storage()
+  storage_points = state.storage
   
+  # we already know that the box is on one of the edges
   for storage in storage_points:
     if axis == "x":
       # if the storage's x position is the same as the box's x position, then the storage and the box are on the same edge (left or right)
@@ -102,48 +116,42 @@ def has_storage_on_edge(state, box, axis):
         return True
 
     return False
-""" 
-def has_storage_on_y(state, box):
-  storage_points = state.storage()
-  for storage in storage_points:
-    
-    if storage[1] == box[1]:
-      return True
-
-    return False """
 
 def box_is_stuck(state, obstacles):
-  # Note: only boxes can be stuck
-  unstored_boxes = state.boxes - state.storage
+    # Note: only boxes can be stuck
+    
+    stuck = False
 
-  stuck = False
-
-  for box in unstored_boxes:
-    if stuck:
-      return True
-
-    # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
-    cornered = is_cornered(box, obstacles)
-
-    # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
-    # If a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
-    # Because you can't get the box back towards the center of the board
-    storage_available_on_x = None
-    storage_available_on_y = None
-
-    if box[0] == 0 or box[0] == state.width - 1:
-      storage_available_on_x = has_storage_on_edge(state, box, "x")
-    elif box[1] == 0 or box[1] == state.height - 1:
-      storage_available_on_y = has_storage_on_edge(state, box, "y")
-    else:
-      storage_available_on_x = True
-      storage_available_on_y = True
-
-    if cornered or not storage_available_on_x or not storage_available_on_y:
-      stuck = True
-
-  return False
-
+    for box in state.boxes:
+        if box not in state.storage:
+            if stuck:
+              return True
+            
+            # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
+            # On the puzzle board, there are 2 types of corners
+            
+            # 1. The box is in one of the corners of the game board
+            cornered = is_cornered(box, state.width, state.height)
+        
+            # 2. The box is surrounded on its adjacent sides by obstacles, such that a robot can't move it without pulling on it (a "pseudo-corner")
+            surrounded = is_pseudo_cornered(box, obstacles)
+        
+            # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
+            # If a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
+            # Because you can't get the box back towards the center of the board
+            storage_available_on_x = True
+            storage_available_on_y = True
+        
+            if box[0] == 0 or box[0] == state.width - 1:
+              storage_available_on_x = has_storage_on_edge(state, box, "x")
+            if box[1] == 0 or box[1] == state.height - 1:
+              storage_available_on_y = has_storage_on_edge(state, box, "y")
+        
+            if cornered or surrounded or not storage_available_on_x or not storage_available_on_y:
+              stuck = True  
+    
+    return False
+   
 def heur_alternate(state):
 #IMPLEMENT
     '''a better heuristic'''
@@ -152,66 +160,80 @@ def heur_alternate(state):
     #heur_manhattan_distance has flaws.
     #Write a heuristic function that improves upon heur_manhattan_distance to estimate distance between the current state and the goal.
     #Your function should return a numeric value for the estimate of the distance to the goal.
-
-    count = 0
-    unstored_boxes = state.boxes - state.storage
-    available_storage = state.storage - state.boxes
-
-    # Find the location of the obstacles
-    # Obstacles include: boundaries of the board, other robots (added dynamically), other boxes (added dynamically), actual obstacles themselves
-    obstacles = [] 
-
-    for x in range(-1, state.width + 1):
-      obstacles.append((x, -1)) # upper wall
-      obstacles.append((x, state.height + 1)) # lower wall
-
-    for y in range(state.height):
-      obstacles.append((-1, y)) # left wall
-      obstacles.append(state.width + 1, y) # right wall
     
-    for obstacle in state.obstacles:
-      obstacles.append(obstacle)
-    
+    cost = 0
+    unstored_boxes = list(state.boxes - state.storage)
+    available_storage = list(state.storage - state.boxes)
+
     # Check if the current state is "stuck"
     # A box is stuck if it's either cornered or on the edge with no storage boxes located on that edge
-    if box_is_stuck(state, obstacles):
+    if box_is_stuck(state, state.obstacles):
       # A "stuck" position isn't ideal, so set the cost to be high
-      count += 1000
-
+      cost += float("inf")
+      #return cost
+    
+    # Use BFS (breadth-first search) to find the cost of moving from the current state to a goal state
+    """
+    bfs_search_engine = SearchEngine(strategy='breadth_first', cc_level='full')
+    bfs_search_engine.init_search(initState=state, goal_fn=sokoban_goal_state)
+    sol = bfs_search_engine.search()[0]
+    
+    if sol:
+        # Return the final solution's gval as the cost    
+        cost = sol.gval
+        return cost
+    else:
+        # No path could be fount from the current state to the goal state, set the cost of this state to be infinite
+        cost = float("inf")
+        return cost
+    """    
+    #"""
     # total cost of optimal path for robot r to move box b to storage point s = cost of optimal path from r to b + cost of optimal path from b to s
     # Split the problem into:
-    # 1. Finding the cost of the path from every robot to every box
-    # 2. Finding the cost of the path from every box to every storage point
-
-    # 1. Finding the cost of the path from every robot to every box
+ 
+    # 1. Finding the closest robot to every box using Manhattan distance
     rb_cost = 0
-    for robot in state.robots:
-      dist_from_box = []
-      for box in unstored_boxes:
-        distance = abs(box[0] - robot[0]) + abs(box[1] - robot[1])
-        dist_from_box.append(distance)
+    
+    for box in unstored_boxes:
+      distances = []
+
+      # calculate distance from this box to all robots, keeping track of all distances
+      for robot in state.robots:
+        distance = manhattan_distance(box, robot) 
+        distances.append(distance)
       
-      min_distance = min(dist_from_box)
+      # search for the closest robot to this box by looking for the smallest distance in distances
+      min_distance = min(distances)
+
+      # append the shortest distance to the running sum
       rb_cost += min_distance
     
-    # 2. Finding the cost of the path from every box to every storage point
+    # 2. Finding the closest storage point to every box using Manhattan distance
     bs_cost = 0
+    
     for box in unstored_boxes:
-      dist_from_box = []
+      distances = []
+
+      # calculate distance from this box to all storage points, keeping track of all distances
       for storage in available_storage:
-        distance = abs(box[0] - storage[0]) + abs(box[1] - storage[1])
-        dist_from_box[storage] = distance
+        distance = manhattan_distance(box, storage) 
+        distances.append(distance)
       
-      min_distance = min(dist_from_box)
+      # search for the closest storage to this box by looking for the smallest distance in distances
+      min_distance = min(distances)
+
+      # append the shortest distance to the running sum
       bs_cost += min_distance
 
-    return count
+    cost += (bs_cost + rb_cost)
+    #"""    
+    return cost
 
 def heur_zero(state):
     '''Zero Heuristic can be used to make A* search perform uniform cost search'''
     return 0
 
-def fval_function(sN, weight):
+def fval_function(sN, weight): # autograder.py: 3/3
 #IMPLEMENT
     """
     Provide a custom formula for f-value computation for Anytime Weighted A star.
@@ -235,117 +257,84 @@ def fval_function(sN, weight):
 
 def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
 #IMPLEMENT
-  '''Provides an implementation of anytime weighted a-star, as described in the HW1 handout'''
-  '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
-  '''OUTPUT: A goal state (if a goal is found), else False'''
-  '''implementation of anytime weighted astar algorithm'''
-  decrease_weight = 0.8
-
-  wrapped_fval_function = (lambda sN : fval_function(sN, weight))
-
-  astar_search_engine = SearchEngine(strategy='custom', cc_level='full')
-  astar_search_engine.init_search(initial_state=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=wrapped_fval_function)
-  
-  # initialize pruning values to infinity to make sure pruning happens in the first iteration
-  astar_costbound = (float("inf"), float("inf"), float("inf"))
-
-  # initialize the timekeeping variables
-  start_time = os.times()[0]
-  time_remaining = timebound
-
-  # run A* once to get a solution
-  final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
-  if not final_state:
-    best_solution = False
-    return best_solution
-  else:
-    best_solution = final_state
-
-  while time_remaining > 0:
-    # if the search doesn't return anything, return from the function
-    if not final_state:
-      return best_solution
-    
-    final_state_hval = heur_fn(final_state)
-    final_state_fval = final_state.gval + final_state_hval
-
-    # only search if current solution's gval+hval is less than the gval specified in costbound
-    if final_state_fval < astar_costbound[2]:
-      # deduct search time from the time remaining and reset start_time counter
-      search_time = os.times()[0] - start_time
-      time_remaining -= search_time
-
-      # update costbound to reflect the new g_value to prune with
-      astar_costbound = (float("inf"), float("inf"), final_state_fval)
-
-      # save the most recent result (which is also the best result)
-      best_solution = final_state
+    '''Provides an implementation of anytime weighted a-star, as described in the HW1 handout'''
+    '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
+    '''OUTPUT: A goal state (if a goal is found), else False'''
+    '''implementation of anytime weighted astar algorithm'''
+    decrease_weight = 0.6
+    best_solution = None
+    wrapped_fval_function = (lambda sN : fval_function(sN, weight))
+	
+    astar_search_engine = SearchEngine(strategy='custom', cc_level='full')
+    astar_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=wrapped_fval_function)
+	  
+    # initialize pruning values to infinity to make sure pruning happens in the first iteration
+    astar_costbound = (float("inf"), float("inf"), float("inf"))
+	
+    # initialize the timekeeping variables
+    start_time = os.times()[0]
+    time_remaining = timebound
+	
+    while time_remaining > 0:
+      # subtract 0.1 to account for the effect of high load from the shared teach.cs machines
+      final_state = astar_search_engine.search(timebound=time_remaining-0.1, costbound=astar_costbound)[0]
       
-      # I think the weight should be decreased each time but no function takes in the weight after the init_search function?
-      # So how do you actually decrease the weight in each iteration?
-      weight *= decrease_weight
+      if final_state:
+          final_state_hval = heur_fn(final_state)
+          final_state_fval = final_state.gval + final_state_hval
+          
+          if final_state_fval < astar_costbound[2]:
+              search_time = os.times()[0] - start_time
+              time_remaining -= search_time
+              start_time = os.times()[0]
+              
+              # update costbound to reflect the new g_value to prune with
+              astar_costbound = (float("inf"), float("inf"), final_state.gval)
+              best_solution = final_state
+              
+              # decrease weight by re-init_search-ing the search engine
+              weight *= decrease_weight
+              astar_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=wrapped_fval_function)
+      else:
+          return best_solution  
 
-      # prepare to run the search again with the updated costbound
-      start_time = os.times()
-      final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)
-    
-    else:
-      # gbfs couldn't find a path with lower gval than the gval of the previous search iteration
-      # so best_solution is indeed the best solution
-      return best_solution
+    return best_solution
 
-  return best_solution
-
-def anytime_gbfs(initial_state, heur_fn, timebound = 10):
+def anytime_gbfs(initial_state, heur_fn, timebound = 10): 
 #IMPLEMENT
-  '''Provides an implementation of anytime greedy best-first search, as described in the HW1 handout'''
-  '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
-  '''OUTPUT: A goal state (if a goal is found), else False'''
-  '''implementation of anytime greedy best-first search'''
-  
-  gbfs_search_engine = SearchEngine(strategy='best_first', cc_level='full')
-  gbfs_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=None)
+    '''Provides an implementation of anytime greedy best-first search, as described in the HW1 handout'''
+    '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
+    '''OUTPUT: A goal state (if a goal is found), else False'''
+    '''implementation of anytime greedy best-first search'''
+    best_solution = None
+    
+    gbfs_search_engine = SearchEngine(strategy='best_first', cc_level='full')
+    gbfs_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=None)
 
-  # initialize pruning g_value to infinity to make sure pruning happens in the first iteration
-  gbfs_costbound = (float("inf"), float("inf"), float("inf"))
+    # initialize pruning g_value to infinity to make sure pruning happens in the first iteration
+    gbfs_costbound = (float("inf"), float("inf"), float("inf"))
 
-  # initialize the timekeeping variables
-  start_time = os.times()[0]
-  time_remaining = timebound
+    # initialize the timekeeping variables
+    start_time = os.times()[0]
+    time_remaining = timebound
 
-  # run gbfs once to get a solution, save the solution as the best solution encountered so far
-  final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
-  if not final_state:
-    best_solution = False
+    while time_remaining > 0:
+      # subtract 0.1 to account for the effect of high load from the shared teach.cs machines
+      final_state = gbfs_search_engine.search(timebound=time_remaining-0.1, costbound=gbfs_costbound)[0]
+      
+      if final_state:
+          if final_state.gval < gbfs_costbound[0]:
+              # deduct search time from the time remaining and reset start_time counter
+              search_time = os.times()[0] - start_time
+              time_remaining -= search_time
+              start_time = os.times()[0]
+          
+              # update costbound to reflect the new g_value to prune with
+              gbfs_costbound = (final_state.gval, float("inf"), float("inf"))
+    
+              # save the most recent result (which is also the best result)
+              best_solution = final_state
+      else:
+          return best_solution
+
     return best_solution
-  else:
-    best_solution = final_state
-
-  while time_remaining > 0:
-    # if the search doesn't return anything, return from the function
-    if not final_state:
-      return best_solution
-    
-    # only search if current solution's gval is less than the gval specified in costbound
-    if final_state.gval < gbfs_costbound[0]:
-      # deduct search time from the time remaining and reset start_time counter
-      search_time = os.times()[0] - start_time
-      time_remaining -= search_time
-      
-
-      # update costbound to reflect the new g_value to prune with
-      gbfs_costbound = (final_state.gval, float("inf"), float("inf"))
-
-      # save the most recent result (which is also the best result)
-      best_solution = final_state
-
-      # prepare to run the search again with the updated costbound
-      start_time = os.times()
-      final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)
-    
-    else:
-      # gbfs couldn't find a path with lower gval than the gval of the previous search iteration
-      # so best_solution is indeed the best solution
-      return best_solution
-      
-  return best_solution
