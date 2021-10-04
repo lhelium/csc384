@@ -173,6 +173,7 @@ def heur_alternate(state):
       #return cost
     
     # Use BFS (breadth-first search) to find the cost of moving from the current state to a goal state
+    # If you use BFS, you keep triggering memory exceptions inside memory exceptions a la ECE344
     """
     bfs_search_engine = SearchEngine(strategy='breadth_first', cc_level='full')
     bfs_search_engine.init_search(initState=state, goal_fn=sokoban_goal_state)
@@ -274,10 +275,10 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
     # initialize the timekeeping variables
     start_time = os.times()[0]
     time_remaining = timebound
-	
-    while time_remaining > 0:
-      # subtract 0.1 to account for the effect of high load from the shared teach.cs machines
-      final_state = astar_search_engine.search(timebound=time_remaining-0.1, costbound=astar_costbound)[0]
+
+    # subtract 0.1 to account for the stuff done prior to the actual search and the effect of high load from the shared teach.cs machines
+    while (time_remaining-0.1) > 0:
+      final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)[0]
       
       if final_state:
           final_state_hval = heur_fn(final_state)
@@ -318,9 +319,9 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
     start_time = os.times()[0]
     time_remaining = timebound
 
-    while time_remaining > 0:
-      # subtract 0.1 to account for the effect of high load from the shared teach.cs machines
-      final_state = gbfs_search_engine.search(timebound=time_remaining-0.1, costbound=gbfs_costbound)[0]
+    while (time_remaining-0.1) > 0:
+      # subtract 0.1 to account for the stuff done prior to the actual search and the effect of high load from the shared teach.cs machines
+      final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)[0]
       
       if final_state:
           if final_state.gval < gbfs_costbound[0]:

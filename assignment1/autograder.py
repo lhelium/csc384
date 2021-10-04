@@ -12,9 +12,9 @@ test_time_astar = True
 test_time_gbfs = True
 test_manhattan = False
 test_fval_function = False
-test_anytime_gbfs = True
-test_alternate = True
-test_anytime_weighted_astar = True
+test_anytime_gbfs = False
+test_alternate = False
+test_anytime_weighted_astar = False
 #"""
 
 # Test all
