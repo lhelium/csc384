@@ -82,25 +82,60 @@ def is_cornered(box, xmax, ymax):
     else:
         return False
 
-def is_pseudo_cornered(loc, obstacles):
-  # A 'pseudo-corner' is defined as the a location where the only other free spot is located diagonally across from the current state
-    
+def is_pseudo_cornered(loc, xmax, ymax, obstacles):
+  # If a box isn't on the edge, check that it isn't 'pseudo-cornered' 
+  # AKA: Isn't at a location where the only other free spot is located diagonally across from the current state
   if (loc[0] + 1, loc[1]) in obstacles:
     if (loc[0], loc[1] + 1) in obstacles: # box is in upper-left corner
       return True
     elif (loc[0], loc[1] - 1) in obstacles: # box is in lower left corner
       return True
-    else:
-      return False
   
   if (loc[0] - 1, loc[1]) in obstacles:
     if (loc[0], loc[1] + 1) in obstacles: # box is in upper-right corner
       return True
     elif (loc[0], loc[1] - 1) in obstacles: # box is in lower-right corner
       return True
-    else:
-      return False
+  """
+  # box is in upper-left corner
+  if (loc[0] + 1, loc[1]) in obstacles and (loc[0], loc[1] + 1) in obstacles:
+    return True
   
+  # box is in lower left corner
+  if (loc[0] + 1, loc[1]) in obstacles and (loc[0], loc[1] - 1) in obstacles:
+    return True
+ 
+  # box is in upper-right corner
+  if (loc[0] - 1, loc[1]) in obstacles and (loc[0], loc[1] + 1) in obstacles:
+    return True
+  """
+  # box is in lower-right corner
+  if (loc[0] - 1, loc[1]) in obstacles and (loc[0], loc[1] - 1) in obstacles:
+    return True
+
+  # If a box is on the edge, check that its surrounding positions aren't obstacles
+  # Left wall  
+  if loc[0] == 0:
+    if loc[1] - 1 in obstacles or loc[1] + 1 in obstacles: # on left wall and positions above and below it are obstacles
+      return True
+  
+  # Right wall
+  if loc[0] == xmax - 1:
+    if loc[1] - 1 in obstacles or loc[1] + 1 in obstacles: # on right wall and positions above and below it are obstacles
+      return True
+
+  # Upper wall
+  if loc[1] == 0:
+    if loc[0] - 1 in obstacles or loc[1] + 1 in obstacles: # on top wall and positions left and right it are obstacles
+      return True
+
+  # Lower wall
+  if loc[1] == ymax - 1:
+    if loc[0] - 1 in obstacles or loc[1] + 1 in obstacles: # on bottom wall and positions left and right it are obstacles
+      return True
+
+  return False
+
 def has_storage_on_edge(state, box, axis):
   storage_points = state.storage
   
@@ -121,35 +156,37 @@ def box_is_stuck(state, obstacles):
     # Note: only boxes can be stuck
     
     stuck = False
-
+    unstored_boxes = list(state.boxes - state.storage)
+    obstacles = obstacles.union(state.boxes)
+    
     for box in state.boxes:
-        if box not in state.storage:
-            if stuck:
-              return True
-            
-            # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
-            # Because, just like how you can't push on a rope in CIV101, you can't pull on a box in sokoban
-            
-            # On the puzzle board, there are 2 types of corners
-            
-            # 1. The box is in one of the corners of the game board
-            cornered = is_cornered(box, state.width, state.height)
+      if box not in state.storage:
+        if stuck:
+          return True
         
-            # 2. The box is surrounded on its adjacent sides by obstacles, such that a robot can't move it without pulling on it (a "pseudo-corner")
-            surrounded = is_pseudo_cornered(box, obstacles)
+        # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
+        # Because, just like how you can't push on a rope in CIV101, you can't pull on a box in sokoban
         
-            # If a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
-            # Because you can't get the box back towards the center of the board
-            storage_available_on_x = True
-            storage_available_on_y = True
+        # On the puzzle board, there are 2 types of corners
         
-            if box[0] == 0 or box[0] == state.width - 1:
-              storage_available_on_x = has_storage_on_edge(state, box, "x")
-            if box[1] == 0 or box[1] == state.height - 1:
-              storage_available_on_y = has_storage_on_edge(state, box, "y")
+        # 1. The box is in one of the corners of the game board
+        cornered = is_cornered(box, state.width, state.height)
+    
+        # 2. The box is surrounded on its adjacent sides by obstacles, such that a robot can't move it without pulling on it (a "pseudo-corner")
+        surrounded = is_pseudo_cornered(box, state.width, state.height, obstacles)
         
-            if cornered or surrounded or not storage_available_on_x or not storage_available_on_y:
-              stuck = True  
+        # If a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then it's also stuck
+        # Because you can't get the box back towards the center of the board
+        storage_available_on_x = True
+        storage_available_on_y = True
+    
+        if box[0] == 0 or box[0] == state.width - 1:
+          storage_available_on_x = has_storage_on_edge(state, box, "x")
+        if box[1] == 0 or box[1] == state.height - 1:
+          storage_available_on_y = has_storage_on_edge(state, box, "y")
+    
+        if cornered or surrounded or not storage_available_on_x or not storage_available_on_y:
+          stuck = True  
     
     return False
    
@@ -200,7 +237,8 @@ def heur_alternate(state):
       
       min_distance = min(distances)
       bs_cost += min_distance
-
+    
+    # 3. Sum the costs
     cost += (bs_cost + rb_cost)
         
     return cost
@@ -237,6 +275,7 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
     '''INPUT: a sokoban state that represents the start state and a timebound (number of seconds)'''
     '''OUTPUT: A goal state (if a goal is found), else False'''
     '''implementation of anytime weighted astar algorithm'''
+    
     decrease_weight = 0.6
     best_solution = None
     wrapped_fval_function = (lambda sN : fval_function(sN, weight))
