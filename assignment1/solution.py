@@ -128,6 +128,8 @@ def box_is_stuck(state, obstacles):
               return True
             
             # Much like Baby from Dirty Dancing, "Nobody puts (the next state) in a corner!"
+            # Because, just like how you can't push on a rope in CIV101, you can't pull on a box in sokoban
+            
             # On the puzzle board, there are 2 types of corners
             
             # 1. The box is in one of the corners of the game board
@@ -136,7 +138,6 @@ def box_is_stuck(state, obstacles):
             # 2. The box is surrounded on its adjacent sides by obstacles, such that a robot can't move it without pulling on it (a "pseudo-corner")
             surrounded = is_pseudo_cornered(box, obstacles)
         
-            # Just like how you can't push on a rope in CIV101, you can't pull on a box in CSC384 A1
             # If a box is on the edge of the board, and there aren't any storage locations on the edge of the board, then the position isn't admissible
             # Because you can't get the box back towards the center of the board
             storage_available_on_x = True
@@ -170,25 +171,7 @@ def heur_alternate(state):
     if box_is_stuck(state, state.obstacles):
       # A "stuck" position isn't ideal, so set the cost to be high
       cost += float("inf")
-      #return cost
     
-    # Use BFS (breadth-first search) to find the cost of moving from the current state to a goal state
-    # If you use BFS, you keep triggering memory exceptions inside memory exceptions a la ECE344
-    """
-    bfs_search_engine = SearchEngine(strategy='breadth_first', cc_level='full')
-    bfs_search_engine.init_search(initState=state, goal_fn=sokoban_goal_state)
-    sol = bfs_search_engine.search()[0]
-    
-    if sol:
-        # Return the final solution's gval as the cost    
-        cost = sol.gval
-        return cost
-    else:
-        # No path could be fount from the current state to the goal state, set the cost of this state to be infinite
-        cost = float("inf")
-        return cost
-    """    
-    #"""
     # total cost of optimal path for robot r to move box b to storage point s = cost of optimal path from r to b + cost of optimal path from b to s
     # Split the problem into:
  
@@ -198,15 +181,11 @@ def heur_alternate(state):
     for box in unstored_boxes:
       distances = []
 
-      # calculate distance from this box to all robots, keeping track of all distances
       for robot in state.robots:
         distance = manhattan_distance(box, robot) 
         distances.append(distance)
       
-      # search for the closest robot to this box by looking for the smallest distance in distances
       min_distance = min(distances)
-
-      # append the shortest distance to the running sum
       rb_cost += min_distance
     
     # 2. Finding the closest storage point to every box using Manhattan distance
@@ -215,19 +194,15 @@ def heur_alternate(state):
     for box in unstored_boxes:
       distances = []
 
-      # calculate distance from this box to all storage points, keeping track of all distances
       for storage in available_storage:
         distance = manhattan_distance(box, storage) 
         distances.append(distance)
       
-      # search for the closest storage to this box by looking for the smallest distance in distances
       min_distance = min(distances)
-
-      # append the shortest distance to the running sum
       bs_cost += min_distance
 
     cost += (bs_cost + rb_cost)
-    #"""    
+        
     return cost
 
 def heur_zero(state):
@@ -275,9 +250,8 @@ def anytime_weighted_astar(initial_state, heur_fn, weight=1., timebound = 10):
     # initialize the timekeeping variables
     start_time = os.times()[0]
     time_remaining = timebound
-
-    # subtract 0.1 to account for the stuff done prior to the actual search and the effect of high load from the shared teach.cs machines
-    while (time_remaining-0.1) > 0:
+	
+    while time_remaining > 0:
       final_state = astar_search_engine.search(timebound=time_remaining, costbound=astar_costbound)[0]
       
       if final_state:
@@ -309,7 +283,7 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
     '''implementation of anytime greedy best-first search'''
     best_solution = None
     
-    gbfs_search_engine = SearchEngine(strategy='best_first', cc_level='full')
+    gbfs_search_engine = SearchEngine(strategy='best_first', cc_level='default')
     gbfs_search_engine.init_search(initState=initial_state, goal_fn=sokoban_goal_state, heur_fn=heur_fn, fval_function=None)
 
     # initialize pruning g_value to infinity to make sure pruning happens in the first iteration
@@ -319,8 +293,7 @@ def anytime_gbfs(initial_state, heur_fn, timebound = 10):
     start_time = os.times()[0]
     time_remaining = timebound
 
-    while (time_remaining-0.1) > 0:
-      # subtract 0.1 to account for the stuff done prior to the actual search and the effect of high load from the shared teach.cs machines
+    while time_remaining > 0:
       final_state = gbfs_search_engine.search(timebound=time_remaining, costbound=gbfs_costbound)[0]
       
       if final_state:

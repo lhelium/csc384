@@ -1,4 +1,4 @@
 /** WRITE YOUR TIPS IN THIS FILE **/
 1. It's worthwhile to play the Sokoban game for yourself. Concepts like "not being able to pull on a box" are much easier to understand when it's visualized.
-2. Sometimes, simpler is better. Make sure you have a simple but working version of the alternate heuristic before you try implementing something more complex.
-3. Follow the suggestion in the handout to read the code that's already provided for you. At the very least, try to skim the functions' return value(s) to make sure you know how to use the return value(s) in your implementation.
+2. Make sure you have a simple but working version of the alternate heuristic before you try implementing something more complex. Don't forget that your alternate heuristic should perform just as well as the Manhattan heuristic, if not better.
+3. Try to read through, or at least skim, the code that's provided to you. You should have a good idea of the functions' return value(s) to make sure you know how to use the return value(s) in your own implementation.
