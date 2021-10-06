@@ -10,6 +10,7 @@ import os
 from typing import final #for time functions
 from search import * #for search engines
 from sokoban import SokobanState, Direction, PROBLEMS #for Sokoban specific classes and problems
+import heapq
 
 def sokoban_goal_state(state):
   '''
@@ -47,10 +48,10 @@ def heur_manhattan_distance(state): # autograder.py: 20/20
       # calculate distance from this box to all storage points, keeping track of all distances
       for storage_point in state.storage:
         distance = manhattan_distance(box, storage_point) 
-        distances.append(distance)
+        heapq.heappush(distances, distance)
       
       # search for the closest storage_point to this box by looking for the smallest distance in distances
-      min_distance = min(distances)
+      min_distance = distances[0]
 
       # append the shortest distance to the running sum
       manhattan_distance_sum += min_distance
@@ -108,10 +109,11 @@ def is_pseudo_cornered(loc, xmax, ymax, obstacles):
   # box is in upper-right corner
   if (loc[0] - 1, loc[1]) in obstacles and (loc[0], loc[1] + 1) in obstacles:
     return True
-  """
+  
   # box is in lower-right corner
   if (loc[0] - 1, loc[1]) in obstacles and (loc[0], loc[1] - 1) in obstacles:
     return True
+  """
 
   # If a box is on the edge, check that its surrounding positions aren't obstacles
   # Left wall  
@@ -158,7 +160,8 @@ def box_is_stuck(state, obstacles):
     stuck = False
     unstored_boxes = list(state.boxes - state.storage)
     obstacles = obstacles.union(state.boxes)
-    
+    obstacles = obstacles.union(state.robots)
+
     for box in state.boxes:
       if box not in state.storage:
         if stuck:
@@ -202,6 +205,7 @@ def heur_alternate(state):
     cost = 0
     unstored_boxes = list(state.boxes - state.storage)
     available_storage = list(state.storage - state.boxes)
+    robots = list(state.robots)
 
     # Check if the current state is "stuck"
     # A box is stuck if it's either cornered or on the edge with no storage boxes located on that edge
@@ -218,12 +222,16 @@ def heur_alternate(state):
     for box in unstored_boxes:
       distances = []
 
-      for robot in state.robots:
-        distance = manhattan_distance(box, robot) 
-        distances.append(distance)
+      for robot in robots:
+        distance = manhattan_distance(box, robot)
+        heapq.heappush(distances, (distance, robot))
+        #distances.append(distance)
       
-      min_distance = min(distances)
-      rb_cost += min_distance
+      if len(distances) > 0:
+        min_distance = distances[0][0]
+        #closest_robot = distances[0][1]
+        #robots.remove(closest_robot)
+        rb_cost += min_distance
     
     # 2. Finding the closest storage point to every box using Manhattan distance
     bs_cost = 0
@@ -232,11 +240,15 @@ def heur_alternate(state):
       distances = []
 
       for storage in available_storage:
-        distance = manhattan_distance(box, storage) 
-        distances.append(distance)
+        distance = manhattan_distance(box, storage)
+        heapq.heappush(distances, (distance, storage))
+        #distances.append(distance)
       
-      min_distance = min(distances)
-      bs_cost += min_distance
+      if len(distances) > 0:
+        min_distance = distances[0][0]
+        #closest_storage = distances[0][1]
+        #available_storage.remove(closest_storage)
+        bs_cost += min_distance
     
     # 3. Sum the costs
     cost += (bs_cost + rb_cost)
