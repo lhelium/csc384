@@ -115,18 +115,23 @@ def sudokuCSP(initial_sudoku_board, model='neq'):
     #first define the variables
     i = 0
     var_array = []
+
     for row_list in initial_sudoku_board:
         var_array.append([])
         j = 0
+        
         for col in row_list:
             cell = initial_sudoku_board[i][j]
+            
             if cell == 0:
                 dom = [1, 2, 3, 4, 5, 6, 7, 8, 9]
             else:
                 dom = [cell]
+            
             var = Variable("V{},{}".format(i+1, j+1), dom)
             var_array[i].append(var)
             j += 1
+        
         i += 1
 
     #Set up the constraints
@@ -137,28 +142,44 @@ def sudokuCSP(initial_sudoku_board, model='neq'):
         if model == 'neq':
             constraint_list.extend(post_all_pairs(row))
         elif model == 'alldiff':
-            util.raiseNotDefined()
+            # TO IMPLEMENT
+            #util.raiseNotDefined()
+            # constraints.AllDiffConstraint(self, name, scope)
+            # note that scope is the same scope as 'neq' above
+            row_num = var_array.index(row)
+            cnstrs = AllDiffConstraint('sudoku_row_' + str(row_num), row)
+            constraint_list.extend([cnstrs])
 
     for colj in range(len(var_array[0])):
         scope = list(map(lambda row: row[colj], var_array))
+        
         if model == 'neq':
             constraint_list.extend(post_all_pairs(scope))
         elif model == 'alldiff':
-            util.raiseNotDefined()
+            # TO IMPLEMENT
+            #util.raiseNotDefined()
+            cnstrs = AllDiffConstraint('sudoku_col_' + str(colj), scope)
+            constraint_list.extend([cnstrs])
 
     for i in [0, 3, 6]:
         for j in [0, 3, 6]:
             #initial upper left hand index of subsquare
             scope = []
+            
             for k in [0, 1, 2]:
                 for l in [0,1,2]:
                     scope.append(var_array[i+k][j+l])
+            
             if model == 'neq':
                 constraint_list.extend(post_all_pairs(scope))
             elif model == 'alldiff':
-                util.raiseNotDefined()
+                # TO IMPLEMENT
+                #util.raiseNotDefined()
+                cnstrs = AllDiffConstraint('sudoku_subsquare_' + str(int(i/3)) + '_' + str(int(j/3)), scope)
+                constraint_list.extend([cnstrs])
 
     vars = [var for row in var_array for var in row]
+    
     return CSP("Sudoku", vars, constraint_list)
 
 def post_all_pairs(var_list):
@@ -331,16 +352,173 @@ def solve_planes(planes_problem, algo, allsolns,
     '''
 
     #BUILD your CSP here and store it in the varable csp
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+    def plane_csp(planes_problem):
+        # variables: planes (array of length len(flights))
+        #     ex: AC-1, AC-2...
+        # values: flights 
+        #     ex: AC001, AC002, AC003, AC004, AC005
+        # domain of possible values: the flights which a plane can fly 
+        #     ex: AC-1 can fly any flight, AC-2 can't fly flight AC003 but can fly any other flight
+        #     dom(AC-1) = AC001, AC002, AC003, AC004, AC005
+        #     dom(AC-2) = AC001, AC002,        AC004, AC005
+        # var_array should take the form:
+        #     var_array[0][0] = first flight flown by plane AC-1 (initially all flights that can be flown by plane AC-1)
+        #     var_array[0][1] = second flight flown by plane AC-1
+        #     var_array[0][2] = third flight flown by plane AC-1
+        #     var_array[1][0] = first flight flown by plane AC-2 (initially all flights that can be flown by plane AC-2)
+        #     etc...
 
-    csp = None #set to to your CSP 
+        planes = planes_problem.planes
+        flights = planes_problem.flights
+        can_fly = planes_problem._can_fly
+        flights_at_start = planes_problem._flights_at_start
+        can_follow = planes_problem.can_follow
+        maintenance_flights = planes_problem.maintenance_flights
+        min_maintenance_frequency = planes_problem.min_maintenance_frequency
+        
+        var_array = []
+
+        # i = which plane
+        for i in range(len(planes)):
+            var_array.append([])
+
+            dom = ["none"] # assume initiallty that plane i can't fly any flights
+            
+            # can_fly is a dict where the keys are the planes and the values are the flights a plane can fly
+            # retrieve the flights associates with planes[i]
+            # and add those flights to the domain
+            plane_can_fly = can_fly[planes[i]]
+            dom.extend(plane_can_fly)
+            
+            # j = flight number of plane i
+            for j in range(len(plane_can_fly)):
+                var = Variable("Plane {} Flight number {}".format(planes[i], j), dom)
+                var_array[i].append(var)
+
+        constraint_list = []
+
+        # C1: each plane is only assigned flights it is capable of flying 
+        # Done, already accounted for when assigning the domains
+
+        # C2: each plane's initial flight can only be a flight departing from that plane's initial location
+        # restrict var_array[i][0] to only the flights that can be initial flights
+        for i in range(len(var_array)):
+            var_name = var_array[i][0].name() # will be in format: "Plane AC-number Flight number number"
+            var_name = var_name.split(" ") # will be in format ['Plane', 'AC-number', 'Flight', 'number', 'number']
+            plane_name = var_name[1] # retrieve the plane's name (ie: AC-number)
+
+            first_flight = var_array[i][0]
+            can_start = []
+
+            for flight in flights_at_start[plane_name]:
+                can_start.append([flight])
+            
+            cnstr_2 = TableConstraint(name='Plane_{}_valid_first_flights'.format(plane_name), scope=[first_flight], satisfyingAssignments=can_start)
+            constraint_list.extend([cnstr_2])
+            
+        # C3: sequence of flights flown must be feasible
+        valid_connections = []
+        
+        valid_connections.append(["none", "none"]) # no connections is also a valid connection
+
+        for connection in can_follow:
+            valid_connections.append(list(connection))
+
+        for flight in flight:
+            valid_connections.append([flight, "none"])
+
+        for i in range(len(var_array)):
+            for j in range(len(var_array[i]) - 1):
+                departure = var_array[i][j]
+                arrival = var_array[i][j + 1]
+
+                cnstr_3 = TableConstraint(name="{}_{}_feasible".format(departure, arrival), scope=[departure, arrival], satisfyingAssignments=valid_connections)
+                constraint_list.extend([cnstr_3])
+
+        # C4: all planes must be serviced within a certain minimum frequency
+        # if number of flights flown by that plane is less than min_maintenance_frequency, then it doesn't need any maintenance
+        required_values = ["none"]
+        required_values.extend(maintenance_flights)
+
+        for i in range(len(planes)):
+            for j in range(len(var_array[i]) - min_maintenance_frequency + 1):
+                # sliding window: check that for every min_maintenance_frequency flights, the constraint is satisfied
+                sliding_window = var_array[i][j : j + min_maintenance_frequency]
+        
+                # use NValuesConstraint to require that every min_maintenance_frequency, a plane needs to fly one of the maintenance_flights
+                cnstr_4 = NValuesConstraint(name='{}_maintenance_freq'.format(planes[i]), scope=sliding_window, required_values=required_flights, lower_bound=1, upper_bound=min_maintenance_frequency)
+                constraint_list.extend([cnstr_4])
+
+        # C5: each flight must be scheduled and 
+        # C6: no flight can be scheduled more than once
+        vars = [var for row in var_array for var in row]
+        
+        cnstr_5_6 = EachFlightScheduledOnceConstraint(name="OnlyOnce", scope=vars, all_flights=flights)
+        constraint_list.extend([cnstr_5_6])
+
+        csp = CSP("PlaneScheduling", vars, constraint_list)
+        return csp
+
+    csp = plane_csp(planes_problem)
     #invoke search with the passed parameters
     solutions, num_nodes = bt_search(algo, csp, variableHeuristic, allsolns, trace)
 
     #Convert each solution into a list of lists specifying a schedule
-    #for each plane in the format described above.
+    #for each plane in the format described above. 
 
     #then return a list containing all converted solutions
     #(i.e., a list of lists of lists)
+    all_solutions = []
 
+    if not silent:
+        print("Explored {} nodes".format(num_nodes))
 
+    if len(solutions) == 0:
+        if not silent:
+            print("No solutions to {} found".format(csp.name()))
+    else:
+        print(type(solutions))
+        print(solutions)
+
+        for solution in solutions:
+            print(type(solution))
+            print(solution)
+        """for solution in solutions:
+            for s in solution:
+                print(s) # (<csp.Variable object at 0x7fce13f35940>, 'AC01')
+                
+                a_solution = []
+                sol_dict = dict() # format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
+
+                name = s[0].name() # will be in format: "Plane AC-number Flight number number"
+                name = name.split(" ") # will be in format ['Plane', 'AC-number', 'Flight', 'number', 'number']
+                plane_name = name[2] # retrieve the plane's name (ie: AC-number)
+                flight_position = name[-1] # retrieve the flight's position (ie: number)
+                val = s[1] # val is the flght itself (ie: AC001, AC002, etc.)
+
+                if plane_name in sol_dict:
+                    sol_dict[plane_name].append([flight_position, val])
+                else:
+                    sol_dict[plane_name] = [flight_position, val]
+                
+                # order a_solution by increasing plane name
+                plane_names = list(sol_dict.keys())
+                plane_names.sort()
+
+                for name in plane_names:
+                    sol_list = []
+                    sol_list.append(name)
+
+                    flight_sequence = sol_dict[name] # will be in format (flight_position, flight_name)
+
+                    for flight_info in flight_sequence:
+                        flight = flight_info[1] # retrieve the flight name
+
+                        if flight != "":
+                            sol_list.append(flight)
+                    a_solution.append(sol_list)
+
+                all_solutions.append(a_solution)"""
+
+    return all_solutions        
