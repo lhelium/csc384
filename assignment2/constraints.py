@@ -366,7 +366,7 @@ class NValuesConstraint(Constraint):
         return x
 # plane_scheduling.py constraints
 
-class ValidInitialFlightsConstraint(Constraint):
+""" class ValidInitialFlightsConstraint(Constraint):
     def __init__(self, name, scope, valid_flights):
         Constraint.__init__(self, name, scope)
         self._name = 'ValidInitialFlights_' + name
@@ -400,7 +400,7 @@ class ValidInitialFlightsConstraint(Constraint):
         varsToAssign.remove(var)
         x = findvals(varsToAssign, [(var, val)], valid_first_flight, valid_first_flight)
 
-        return x
+        return x """
 
 class EachFlightScheduledOnceConstraint(Constraint):
     #def __init__(self, name, scope, flown_flights, all_flights):
@@ -420,10 +420,6 @@ class EachFlightScheduledOnceConstraint(Constraint):
                 value = v.getValue()
 
                 # count the number of times a value/flight occurs
-                """ if value in assignments:
-                    assignments[value] += 1
-                else:
-                    assignments[value] = 1 """
                 # ####
                 if value != "none":
                     if value in assignments:
@@ -457,11 +453,6 @@ class EachFlightScheduledOnceConstraint(Constraint):
             assignments = dict()
 
             for (variable, value) in l:
-                """ if value in assignments:
-                    assignments[value] += 1
-                else:
-                    assignments[value] = 1 """
-
                 # ####
                 if value != "none":
                     if value in assignments:
