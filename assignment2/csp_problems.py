@@ -371,9 +371,9 @@ def solve_planes(planes_problem, algo, allsolns,
 
         planes = planes_problem.planes
         flights = planes_problem.flights
-        can_fly = planes_problem._can_fly
-        flights_at_start = planes_problem._flights_at_start
-        can_follow = planes_problem.can_follow
+        can_fly = planes_problem._can_fly # format: list of dicts {plane_name : [flights]}
+        flights_at_start = planes_problem._flights_at_start # format: list of dicts {plane_name : [flights]}
+        can_follow = planes_problem.can_follow # format: list of tuples (flight_one, flight_two)
         maintenance_flights = planes_problem.maintenance_flights
         min_maintenance_frequency = planes_problem.min_maintenance_frequency
         
@@ -382,8 +382,10 @@ def solve_planes(planes_problem, algo, allsolns,
         # i = which plane
         for i in range(len(planes)):
             var_array.append([])
-
-            dom = ["none"] # assume initiallty that plane i can't fly any flights
+            dom = []
+            
+            # ####
+            """ dom.append("none") # assume initiallty that plane i can't fly any flights """
             
             # can_fly is a dict where the keys are the planes and the values are the flights a plane can fly
             # retrieve the flights associates with planes[i]
@@ -402,10 +404,11 @@ def solve_planes(planes_problem, algo, allsolns,
         # Done, already accounted for when assigning the domains
 
         # C2: each plane's initial flight can only be a flight departing from that plane's initial location
-        # restrict var_array[i][0] to only the flights that can be initial flights
+        # can_start stores the satisfying assignments
+    
         for i in range(len(var_array)):
             var_name = var_array[i][0].name() # will be in format: "Plane AC-number Flight number number"
-            var_name = var_name.split(" ") # will be in format ['Plane', 'AC-number', 'Flight', 'number', 'number']
+            var_name = var_name.split(" ") # will be in format ['Plane', AC-number, 'Flight', 'number', number]
             plane_name = var_name[1] # retrieve the plane's name (ie: AC-number)
 
             first_flight = var_array[i][0]
@@ -414,20 +417,27 @@ def solve_planes(planes_problem, algo, allsolns,
             for flight in flights_at_start[plane_name]:
                 can_start.append([flight])
             
+            # insert each plane's first flight as a row of a table constraint
             cnstr_2 = TableConstraint(name='Plane_{}_valid_first_flights'.format(plane_name), scope=[first_flight], satisfyingAssignments=can_start)
             constraint_list.extend([cnstr_2])
             
         # C3: sequence of flights flown must be feasible
+        # valid_connections stores the satisfying assignments
         valid_connections = []
         
-        valid_connections.append(["none", "none"]) # no connections is also a valid connection
-
-        for connection in can_follow:
-            valid_connections.append(list(connection))
-
+        # ####
+        """ # no connections is a valid connection
+        valid_connections.append(("none", "none"))
+        # flights with no valid destination is a valid connection
         for flight in flight:
-            valid_connections.append([flight, "none"])
+            valid_connections.append((flight, "none")) """
 
+        # add the valid connection pairs
+        for connection in can_follow:
+            valid_connections.append(connection)
+
+        # for each plane i, iterate over the pairs of flights to see if they are feasible
+        # insert each pair of flights into a table constraint
         for i in range(len(var_array)):
             for j in range(len(var_array[i]) - 1):
                 departure = var_array[i][j]
@@ -437,17 +447,23 @@ def solve_planes(planes_problem, algo, allsolns,
                 constraint_list.extend([cnstr_3])
 
         # C4: all planes must be serviced within a certain minimum frequency
+        # satisfying assignments
+        required_values = []
+
         # if number of flights flown by that plane is less than min_maintenance_frequency, then it doesn't need any maintenance
-        required_values = ["none"]
+        required_values.append("none")
+
+        # add the maintenance flights
         required_values.extend(maintenance_flights)
 
-        for i in range(len(planes)):
+        # for each plane i, use a sliding window with width min_maintenance_frequency to check if the flights within that window satisfy the constraint
+        for i in range(len(var_array)):
             for j in range(len(var_array[i]) - min_maintenance_frequency + 1):
-                # sliding window: check that for every min_maintenance_frequency flights, the constraint is satisfied
                 sliding_window = var_array[i][j : j + min_maintenance_frequency]
         
                 # use NValuesConstraint to require that every min_maintenance_frequency, a plane needs to fly one of the maintenance_flights
-                cnstr_4 = NValuesConstraint(name='{}_maintenance_freq'.format(planes[i]), scope=sliding_window, required_values=required_flights, lower_bound=1, upper_bound=min_maintenance_frequency)
+                cnstr_4 = NValuesConstraint(name='{}_maintenance_freq'.format(var_array[i]), scope=sliding_window, required_values=required_values, \
+                                                                                lower_bound=1, upper_bound=min_maintenance_frequency)
                 constraint_list.extend([cnstr_4])
 
         # C5: each flight must be scheduled and 
@@ -462,13 +478,9 @@ def solve_planes(planes_problem, algo, allsolns,
 
     csp = plane_csp(planes_problem)
     #invoke search with the passed parameters
-    solutions, num_nodes = bt_search(algo, csp, variableHeuristic, allsolns, trace)
+    solutions, num_nodes = bt_search(algo, csp, variableHeuristic, allsolns, trace) 
 
-    #Convert each solution into a list of lists specifying a schedule
-    #for each plane in the format described above. 
-
-    #then return a list containing all converted solutions
-    #(i.e., a list of lists of lists)
+    
     all_solutions = []
 
     if not silent:
@@ -478,47 +490,48 @@ def solve_planes(planes_problem, algo, allsolns,
         if not silent:
             print("No solutions to {} found".format(csp.name()))
     else:
-        print(type(solutions))
-        print(solutions)
-
         for solution in solutions:
-            print(type(solution))
-            print(solution)
-        """for solution in solutions:
-            for s in solution:
-                print(s) # (<csp.Variable object at 0x7fce13f35940>, 'AC01')
-                
-                a_solution = []
-                sol_dict = dict() # format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
-
-                name = s[0].name() # will be in format: "Plane AC-number Flight number number"
-                name = name.split(" ") # will be in format ['Plane', 'AC-number', 'Flight', 'number', 'number']
-                plane_name = name[2] # retrieve the plane's name (ie: AC-number)
+            #Convert each solution into a list of lists specifying a schedule
+            #for each plane in the format described above.
+            a_solution = []
+            sol_dict = dict() # format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
+            
+            for(var, val) in solution:
+                if not silent: print("Line 492 var, val: {} {}".format(var, val))
+                name = var.name() # will be in format: "Plane AC-number Flight number number"
+                name = name.split(" ") # will be in format ['Plane', AC-##, 'Flight', 'number', #]
+                plane_name = name[1] # retrieve the plane's name (ie: AC-number)
+                if not silent: print("Line 491 plane_name: {}".format(plane_name))
                 flight_position = name[-1] # retrieve the flight's position (ie: number)
-                val = s[1] # val is the flght itself (ie: AC001, AC002, etc.)
+                if not silent: print("Line 493 flight position: {}".format(flight_position))
+                # val is the flght itself (ie: AC001, AC002, etc.)
 
                 if plane_name in sol_dict:
-                    sol_dict[plane_name].append([flight_position, val])
+                    sol_dict[plane_name].append((flight_position, val))
                 else:
-                    sol_dict[plane_name] = [flight_position, val]
-                
-                # order a_solution by increasing plane name
-                plane_names = list(sol_dict.keys())
-                plane_names.sort()
+                    sol_dict[plane_name] = [(flight_position, val)]
+            
+            # order a_solution by increasing plane name
+            plane_names = list(sol_dict.keys())
+            plane_names.sort()
 
-                for name in plane_names:
-                    sol_list = []
-                    sol_list.append(name)
+            for name in plane_names:
+                sol_list = []
+                sol_list.append(name)
 
-                    flight_sequence = sol_dict[name] # will be in format (flight_position, flight_name)
+                flight_info = sol_dict[name] # will be in format (flight_position, flight_name)
 
-                    for flight_info in flight_sequence:
-                        flight = flight_info[1] # retrieve the flight name
+                for entry in flight_info:
+                    flight = entry[1] # retrieve the flight name
+                    sol_list.append(flight)
+                    # ####
+                    """ if flight != "none":
+                        sol_list.append(flight) """
+                        
+                a_solution.append(sol_list)
 
-                        if flight != "":
-                            sol_list.append(flight)
-                    a_solution.append(sol_list)
-
-                all_solutions.append(a_solution)"""
-
-    return all_solutions        
+            #then return a list containing all converted solutions
+            #(i.e., a list of lists of lists)
+            all_solutions.append(a_solution)
+        
+    return all_solutions

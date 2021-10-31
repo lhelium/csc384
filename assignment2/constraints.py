@@ -370,9 +370,9 @@ class EachFlightScheduledOnceConstraint(Constraint):
     def __init__(self, name, scope, all_flights):
         Constraint.__init__(self, name, scope)
         self._name = 'EachFlightScheduledOnce_' + name
-        # self.scope is the flights flown by a plane
-        #self._flown_flights = flown_flights # flown_flights is a dict of "plane : [list of flights flown by that plane]"
+        self._scope = scope # the flights flown by a plane
         self._all_flights = all_flights
+        self.total_num_flights = len(set(all_flights))
 
     def check(self):
         assignments = dict()
@@ -380,19 +380,23 @@ class EachFlightScheduledOnceConstraint(Constraint):
         # v = variable = plane (ex: AC-1)
         for v in self.scope():
             if v.isAssigned():
+                value = v.getValue()
 
-                # v.getValue() = variable's values (ex: flight AC-1 flies flights AC001, AC002, AC003, AC004. AC005)
-                flight = v.getValue()
-                if flight != "none":
-                    if flight in assignments:
-                        assignments[flight] += 1
+                # count the number of times a value/flight occurs
+                if value in assignments:
+                    assignments[value] += 1
+                else:
+                    assignments[value] = 1
+                """ if value != "none":
+                    if value in assignments:
+                        assignments[value] += 1
                     else:
-                        assignments[flight] = 1
+                        assignments[value] = 1 """
             else:
                 return True
 
         # not all flights have been flown
-        if len(assignments) < len(self._all_flights):
+        if len(assignments) < self.total_num_flights:
             return False
         
         # a flight has been flown more than once
@@ -412,14 +416,18 @@ class EachFlightScheduledOnceConstraint(Constraint):
             assignments = dict()
 
             for (variable, value) in l:
-                if value != "none":
-                    if variable in assignments:
-                        assignments[variable] += 1
+                if value in assignments:
+                    assignments[value] += 1
+                else:
+                    assignments[value] = 1
+                """ if value != "none":
+                    if value in assignments:
+                        assignments[value] += 1
                     else:
-                        assignments[variable] = 1
+                        assignments[value] = 1 """
             
             # not all flights have been flown
-            if len(assignments) < len(self._all_flights):
+            if len(assignments) < self.total_num_flights:
                 return False
             
             # a flight has been flown more than once
