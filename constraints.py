@@ -372,7 +372,7 @@ class EachFlightScheduledOnceConstraint(Constraint):
         self._name = 'EachFlightScheduledOnce_' + name
         self._scope = scope # the flights flown by a plane
         self._all_flights = all_flights
-        self.total_num_flights = len(all_flights)
+        self.total_num_flights = len(set(all_flights))
 
     def check(self):
         assignments = dict()
@@ -383,11 +383,15 @@ class EachFlightScheduledOnceConstraint(Constraint):
                 value = v.getValue()
 
                 # count the number of times a value/flight occurs
-                if value != "none":
+                if value in assignments:
+                    assignments[value] += 1
+                else:
+                    assignments[value] = 1
+                """ if value != "none":
                     if value in assignments:
                         assignments[value] += 1
                     else:
-                        assignments[value] = 1
+                        assignments[value] = 1 """
             else:
                 return True
 
@@ -412,11 +416,15 @@ class EachFlightScheduledOnceConstraint(Constraint):
             assignments = dict()
 
             for (variable, value) in l:
-                if value != "none":
+                if value in assignments:
+                    assignments[value] += 1
+                else:
+                    assignments[value] = 1
+                """ if value != "none":
                     if value in assignments:
                         assignments[value] += 1
                     else:
-                        assignments[value] = 1
+                        assignments[value] = 1 """
             
             # not all flights have been flown
             if len(assignments) < self.total_num_flights:
@@ -428,16 +436,9 @@ class EachFlightScheduledOnceConstraint(Constraint):
                     return False
 
             return True
-        
-        # ####
-        """ def could_cover_all(l):
-            if len(set(self._scope)) >= len(set(self._all_flights)):
-                return True
-            else:
-                return False """
 
         varsToAssign = self.scope()
         varsToAssign.remove(var)
-        x = findvals(varsToAssign, [(var, val)], check_all_flights_flown)#, could_cover_all)
+        x = findvals(varsToAssign, [(var, val)], check_all_flights_flown)
 
         return x

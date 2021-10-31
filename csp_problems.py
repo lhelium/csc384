@@ -385,7 +385,7 @@ def solve_planes(planes_problem, algo, allsolns,
             dom = []
             
             # ####
-            dom.append("none") # assume initiallty that plane i can't fly any flights
+            """ dom.append("none") # assume initiallty that plane i can't fly any flights """
             
             # can_fly is a dict where the keys are the planes and the values are the flights a plane can fly
             # retrieve the flights associates with planes[i]
@@ -426,11 +426,11 @@ def solve_planes(planes_problem, algo, allsolns,
         valid_connections = []
         
         # ####
-        # no connections is a valid connection
+        """ # no connections is a valid connection
         valid_connections.append(("none", "none"))
         # flights with no valid destination is a valid connection
         for flight in flight:
-            valid_connections.append((flight, "none"))
+            valid_connections.append((flight, "none")) """
 
         # add the valid connection pairs
         for connection in can_follow:
@@ -523,49 +523,15 @@ def solve_planes(planes_problem, algo, allsolns,
 
                 for entry in flight_info:
                     flight = entry[1] # retrieve the flight name
-
+                    sol_list.append(flight)
                     # ####
-                    if flight != "none":
-                        sol_list.append(flight)
+                    """ if flight != "none":
+                        sol_list.append(flight) """
                         
                 a_solution.append(sol_list)
 
             #then return a list containing all converted solutions
             #(i.e., a list of lists of lists)
             all_solutions.append(a_solution)
-        # ####
-        """ for solution in solutions:
-            #print("Line 482: {}".format(solution))
-
-            single_solution = []
-            sol = dict()
-
-            for (var, val) in solution:
-                plane_name = var.name().split(" ")
-                plane_name = plane_name[1]
-                position = var.name().split(" ")
-                position = position[-1]
-
-                if plane_name in sol:
-                    sol[plane_name].append([position, val])
-                else:
-                    sol[plane_name] = []
-                    sol[plane_name].append([position, val])
-            
-            keys = list(sol.keys())
-            keys.sort()
-
-            for key in keys:
-                lst = [key]
-                seq = sol[key]
-
-                for pos in seq:
-                    flight = pos[1]
-                    if flight != "none":
-                        lst.append(flight)
-                single_solution.append(lst)
-            
-            all_solutions.append(single_solution) """
-    
-    
+        
     return all_solutions
