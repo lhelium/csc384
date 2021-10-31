@@ -364,6 +364,43 @@ class NValuesConstraint(Constraint):
         x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
 
         return x
+# plane_scheduling.py constraints
+
+class ValidInitialFlightsConstraint(Constraint):
+    def __init__(self, name, scope, valid_flights):
+        Constraint.__init__(self, name, scope)
+        self._name = 'ValidInitialFlights_' + name
+        self._scope = scope # the flights flown by a plane
+        self._valid_flights = valid_flights
+
+    def check(self):
+        for v in self.scope():
+            if v.isAssigned():
+                value = v.getValue()
+                if value in self._valid_flights:
+                    return true
+            else:
+                return False
+        return False
+    
+    def hasSupport(self, var, val):
+        '''check if var=val has an extension to an assignment of the
+           other variable in the constraint that satisfies the constraint'''
+           
+        if var not in self.scope():
+            return True # var=val has support on any constraint it does not participate in
+
+        def valid_first_flight(l):
+            for (variable, value) in l:
+                if value in self._valid_flights:
+                    return True
+            return False
+        
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], valid_first_flight, valid_first_flight)
+
+        return x
 
 class EachFlightScheduledOnceConstraint(Constraint):
     #def __init__(self, name, scope, flown_flights, all_flights):
@@ -383,15 +420,16 @@ class EachFlightScheduledOnceConstraint(Constraint):
                 value = v.getValue()
 
                 # count the number of times a value/flight occurs
-                if value in assignments:
+                """ if value in assignments:
                     assignments[value] += 1
                 else:
-                    assignments[value] = 1
-                """ if value != "none":
+                    assignments[value] = 1 """
+                # ####
+                if value != "none":
                     if value in assignments:
                         assignments[value] += 1
                     else:
-                        assignments[value] = 1 """
+                        assignments[value] = 1
             else:
                 return True
 
@@ -407,6 +445,9 @@ class EachFlightScheduledOnceConstraint(Constraint):
         return True
 
     def hasSupport(self, var, val):
+        '''check if var=val has an extension to an assignment of the
+           other variable in the constraint that satisfies the constraint'''
+
         if var not in self.scope():
             return True # var=val has support on any constraint it does not participate in
 
@@ -416,15 +457,17 @@ class EachFlightScheduledOnceConstraint(Constraint):
             assignments = dict()
 
             for (variable, value) in l:
-                if value in assignments:
+                """ if value in assignments:
                     assignments[value] += 1
                 else:
-                    assignments[value] = 1
-                """ if value != "none":
+                    assignments[value] = 1 """
+
+                # ####
+                if value != "none":
                     if value in assignments:
                         assignments[value] += 1
                     else:
-                        assignments[value] = 1 """
+                        assignments[value] = 1
             
             # not all flights have been flown
             if len(assignments) < self.total_num_flights:

@@ -385,11 +385,10 @@ def solve_planes(planes_problem, algo, allsolns,
             dom = []
             
             # ####
-            """ dom.append("none") # assume initiallty that plane i can't fly any flights """
+            dom.append("none") # assume initiallty that plane i can't fly any flights
             
             # can_fly is a dict where the keys are the planes and the values are the flights a plane can fly
-            # retrieve the flights associates with planes[i]
-            # and add those flights to the domain
+            # retrieve the flights associates with planes[i] and add those flights to the domain
             plane_can_fly = can_fly[planes[i]]
             dom.extend(plane_can_fly)
             
@@ -405,14 +404,34 @@ def solve_planes(planes_problem, algo, allsolns,
 
         # C2: each plane's initial flight can only be a flight departing from that plane's initial location
         # can_start stores the satisfying assignments
-    
-        for i in range(len(var_array)):
+
+        """ for i in range(len(var_array)):
             var_name = var_array[i][0].name() # will be in format: "Plane AC-number Flight number number"
             var_name = var_name.split(" ") # will be in format ['Plane', AC-number, 'Flight', 'number', number]
             plane_name = var_name[1] # retrieve the plane's name (ie: AC-number)
 
             first_flight = var_array[i][0]
             can_start = []
+
+            # ####
+            can_start.extend(["none"])
+
+            for flight in flights_at_start[plane_name]:
+                can_start.append([flight])
+            
+            cnstr_2 = ValidInitialFlightsConstraint(name='Plane_{}_valid_first_flights'.format(plane_name), scope=[first_flight], valid_flights=can_start)
+            constraint_list.extend([cnstr_2]) """
+        #ValidInitialFlightsConstraint.__init__(name, scope, valid_flights)
+        for i in range(len(var_array)):
+            var_name = var_array[i][0].name() # will be in format: "Plane AC-number Flight number number"
+            var_name = var_name.split(" ") # will be in format ['Plane', AC-number, 'Flight', 'number', number]
+            plane_name = var_name[1] # retrieve the plane's name (ie: AC-number)
+
+            first_flight = var_array[i][0]
+            #can_start = []
+
+            # ####
+            can_start = [["none"]]
 
             for flight in flights_at_start[plane_name]:
                 can_start.append([flight])
@@ -423,18 +442,20 @@ def solve_planes(planes_problem, algo, allsolns,
             
         # C3: sequence of flights flown must be feasible
         # valid_connections stores the satisfying assignments
-        valid_connections = []
+        # ####
+        valid_connections = [["none", "none"]]
         
         # ####
-        """ # no connections is a valid connection
-        valid_connections.append(("none", "none"))
-        # flights with no valid destination is a valid connection
-        for flight in flight:
-            valid_connections.append((flight, "none")) """
-
+        # no connections is a valid connection
+        #valid_connections.extend(["none", "none"])
         # add the valid connection pairs
         for connection in can_follow:
-            valid_connections.append(connection)
+            valid_connections.append(list(connection))
+        # flights with no valid destination is a valid connection
+        for flight in flight:
+            valid_connections.append([flight, "none"])
+
+        
 
         # for each plane i, iterate over the pairs of flights to see if they are feasible
         # insert each pair of flights into a table constraint
@@ -448,10 +469,11 @@ def solve_planes(planes_problem, algo, allsolns,
 
         # C4: all planes must be serviced within a certain minimum frequency
         # satisfying assignments
-        required_values = []
+        # ####
+        required_values = ["none"]
 
         # if number of flights flown by that plane is less than min_maintenance_frequency, then it doesn't need any maintenance
-        required_values.append("none")
+        #required_values.append("none")
 
         # add the maintenance flights
         required_values.extend(maintenance_flights)
@@ -496,20 +518,17 @@ def solve_planes(planes_problem, algo, allsolns,
             a_solution = []
             sol_dict = dict() # format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
             
-            for(var, val) in solution:
-                if not silent: print("Line 492 var, val: {} {}".format(var, val))
+            for (var, val) in solution:
                 name = var.name() # will be in format: "Plane AC-number Flight number number"
                 name = name.split(" ") # will be in format ['Plane', AC-##, 'Flight', 'number', #]
                 plane_name = name[1] # retrieve the plane's name (ie: AC-number)
-                if not silent: print("Line 491 plane_name: {}".format(plane_name))
                 flight_position = name[-1] # retrieve the flight's position (ie: number)
-                if not silent: print("Line 493 flight position: {}".format(flight_position))
                 # val is the flght itself (ie: AC001, AC002, etc.)
 
                 if plane_name in sol_dict:
-                    sol_dict[plane_name].append((flight_position, val))
+                    sol_dict[plane_name].append([flight_position, val])
                 else:
-                    sol_dict[plane_name] = [(flight_position, val)]
+                    sol_dict[plane_name] = [[flight_position, val]]
             
             # order a_solution by increasing plane name
             plane_names = list(sol_dict.keys())
@@ -523,10 +542,10 @@ def solve_planes(planes_problem, algo, allsolns,
 
                 for entry in flight_info:
                     flight = entry[1] # retrieve the flight name
-                    sol_list.append(flight)
+                    #sol_list.append(flight)
                     # ####
-                    """ if flight != "none":
-                        sol_list.append(flight) """
+                    if flight != "none":
+                        sol_list.append(flight)
                         
                 a_solution.append(sol_list)
 
