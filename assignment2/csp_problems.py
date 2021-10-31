@@ -382,64 +382,30 @@ def solve_planes(planes_problem, algo, allsolns,
         # i = which plane
         for i in range(len(planes)):
             var_array.append([])
-            dom = []
             
-            # ####
-            dom.append("none") # assume initiallty that plane i can't fly any flights
-            
-            # can_fly is a dict where the keys are the planes and the values are the flights a plane can fly
-            # retrieve the flights associates with planes[i] and add those flights to the domain
+
             plane_can_fly = can_fly[planes[i]]
-            dom.extend(plane_can_fly)
-            
-            # j = flight number of plane i
+            plane_can_start = flights_at_start[planes[i]]
+            #print("Line 389: can_fly {} can_start {}".format(plane_can_fly, plane_can_start))
+
+            # C1 (unary constraint, can directly modify domain): each plane is only assigned flights it is capable of flying 
             for j in range(len(plane_can_fly)):
+                dom = []
+                dom.append("none") # since you can have situations like P4 where no flight can be assigned
+
+                # C2 (unary constraint, can directly modify domain): each plane's initial flight can only be a flight departing from that plane's initial location
+                if j == 0:
+                    valid_flights = [flight for flight in plane_can_fly if flight in plane_can_start]
+                    dom.extend(valid_flights)
+                    
+                else:
+                    dom.extend(plane_can_fly)
+                
                 var = Variable("Plane {} Flight number {}".format(planes[i], j), dom)
                 var_array[i].append(var)
 
         constraint_list = []
 
-        # C1: each plane is only assigned flights it is capable of flying 
-        # Done, already accounted for when assigning the domains
-
-        # C2: each plane's initial flight can only be a flight departing from that plane's initial location
-        # can_start stores the satisfying assignments
-
-        """ for i in range(len(var_array)):
-            var_name = var_array[i][0].name() # will be in format: "Plane AC-number Flight number number"
-            var_name = var_name.split(" ") # will be in format ['Plane', AC-number, 'Flight', 'number', number]
-            plane_name = var_name[1] # retrieve the plane's name (ie: AC-number)
-
-            first_flight = var_array[i][0]
-            can_start = []
-
-            # ####
-            can_start.extend(["none"])
-
-            for flight in flights_at_start[plane_name]:
-                can_start.append([flight])
-            
-            cnstr_2 = ValidInitialFlightsConstraint(name='Plane_{}_valid_first_flights'.format(plane_name), scope=[first_flight], valid_flights=can_start)
-            constraint_list.extend([cnstr_2]) """
-        #ValidInitialFlightsConstraint.__init__(name, scope, valid_flights)
-        for i in range(len(var_array)):
-            var_name = var_array[i][0].name() # will be in format: "Plane AC-number Flight number number"
-            var_name = var_name.split(" ") # will be in format ['Plane', AC-number, 'Flight', 'number', number]
-            plane_name = var_name[1] # retrieve the plane's name (ie: AC-number)
-
-            first_flight = var_array[i][0]
-            #can_start = []
-
-            # ####
-            can_start = [["none"]]
-
-            for flight in flights_at_start[plane_name]:
-                can_start.append([flight])
-            
-            # insert each plane's first flight as a row of a table constraint
-            cnstr_2 = TableConstraint(name='Plane_{}_valid_first_flights'.format(plane_name), scope=[first_flight], satisfyingAssignments=can_start)
-            constraint_list.extend([cnstr_2])
-            
         # C3: sequence of flights flown must be feasible
         # valid_connections stores the satisfying assignments
         # ####
@@ -452,7 +418,7 @@ def solve_planes(planes_problem, algo, allsolns,
         for connection in can_follow:
             valid_connections.append(list(connection))
         # flights with no valid destination is a valid connection
-        for flight in flight:
+        for flight in flights:
             valid_connections.append([flight, "none"])
 
         
@@ -464,7 +430,7 @@ def solve_planes(planes_problem, algo, allsolns,
                 departure = var_array[i][j]
                 arrival = var_array[i][j + 1]
 
-                cnstr_3 = TableConstraint(name="{}_{}_feasible".format(departure, arrival), scope=[departure, arrival], satisfyingAssignments=valid_connections)
+                cnstr_3 = TableConstraint(name="C3".format(departure, arrival), scope=[departure, arrival], satisfyingAssignments=valid_connections)
                 constraint_list.extend([cnstr_3])
 
         # C4: all planes must be serviced within a certain minimum frequency
@@ -484,7 +450,7 @@ def solve_planes(planes_problem, algo, allsolns,
                 sliding_window = var_array[i][j : j + min_maintenance_frequency]
         
                 # use NValuesConstraint to require that every min_maintenance_frequency, a plane needs to fly one of the maintenance_flights
-                cnstr_4 = NValuesConstraint(name='{}_maintenance_freq'.format(var_array[i]), scope=sliding_window, required_values=required_values, \
+                cnstr_4 = NValuesConstraint(name='C4'.format(var_array[i]), scope=sliding_window, required_values=required_values, \
                                                                                 lower_bound=1, upper_bound=min_maintenance_frequency)
                 constraint_list.extend([cnstr_4])
 
@@ -492,7 +458,7 @@ def solve_planes(planes_problem, algo, allsolns,
         # C6: no flight can be scheduled more than once
         vars = [var for row in var_array for var in row]
         
-        cnstr_5_6 = EachFlightScheduledOnceConstraint(name="OnlyOnce", scope=vars, all_flights=flights)
+        cnstr_5_6 = EachFlightScheduledOnceConstraint(name="C5", scope=vars, all_flights=flights)
         constraint_list.extend([cnstr_5_6])
 
         csp = CSP("PlaneScheduling", vars, constraint_list)

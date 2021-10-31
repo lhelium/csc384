@@ -378,9 +378,9 @@ class ValidInitialFlightsConstraint(Constraint):
             if v.isAssigned():
                 value = v.getValue()
                 if value in self._valid_flights:
-                    return true
+                    return True
             else:
-                return False
+                return True
         return False
     
     def hasSupport(self, var, val):
@@ -407,7 +407,7 @@ class EachFlightScheduledOnceConstraint(Constraint):
     def __init__(self, name, scope, all_flights):
         Constraint.__init__(self, name, scope)
         self._name = 'EachFlightScheduledOnce_' + name
-        self._scope = scope # the flights flown by a plane
+        self._scope = scope # the planes
         self._all_flights = all_flights
         self.total_num_flights = len(set(all_flights))
 
