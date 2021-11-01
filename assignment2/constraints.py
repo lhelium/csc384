@@ -366,49 +366,6 @@ class NValuesConstraint(Constraint):
         return x
 
 # plane_scheduling.py constraints
-class FeasibleConstraint(Constraint):
-    #def __init__(self, name, scope, flown_flights, all_flights):
-    def __init__(self, name, scope, valid_values):
-        Constraint.__init__(self, name, scope)
-        self._name = 'Feasible_' + name
-        self._scope = scope # a range of min_maintenance_frequency flights
-        self._valid_values = valid_values
-
-    def check(self):
-        for v in self.scope():
-            if v.isAssigned():
-                value = v.getValue()
-
-                if value in self._valid_values:
-                    return True
-                else:
-                    return False
-            else:
-                return True  
-                
-
-    def hasSupport(self, var, val):
-        '''check if var=val has an extension to an assignment of the
-           other variable in the constraint that satisfies the constraint'''
-
-        if var not in self.scope():
-            return True # var=val has support on any constraint it does not participate in
-
-        def check_full_assignment(l):
-            for var, value in l:
-                if value in self._valid_values:
-                    return True
-                else:
-                    return False
-            
-            return True
-
-        varsToAssign = self.scope()
-        varsToAssign.remove(var)
-        x = findvals(varsToAssign, [(var, val)], check_full_assignment)
-
-        return x
-
 class MaintenanceConstraint(Constraint):
     #def __init__(self, name, scope, flown_flights, all_flights):
     def __init__(self, name, scope, min_maintenance_frequency, maintenance_flights):
