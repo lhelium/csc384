@@ -394,14 +394,20 @@ def solve_planes(planes_problem, algo, allsolns,
                 # C2 (unary constraint, can directly modify domain): each plane's initial flight can only be a flight departing from that plane's initial location
                 if j == 0:
                     valid_flights = [flight for flight in plane_can_fly if flight in plane_can_start]
-                    dom.extend(valid_flights)
+
+                    for flight in valid_flights:
+                        dom.append(flight)
+                    #dom.extend(valid_flights)
                     
                 else:
-                    dom.extend(plane_can_fly)
+                    for flight in plane_can_fly:
+                        dom.append(flight)
+                    #dom.extend(plane_can_fly)
                 
                 var = Variable("Plane {} Flight number {}".format(planes[i], j), dom)
                 var_array[i].append(var)
 
+        # create and add all the constraints
         constraint_list = []
 
         # C3: sequence of flights flown must be feasible
@@ -419,6 +425,7 @@ def solve_planes(planes_problem, algo, allsolns,
         # for planes where no flights are scheduled, no flight -> no flight is a valid connection
         valid_connections.append(["none", "none"])
         
+        # use a table constraint because I don't want to expend the brain power to write a new constraint class for this
         # for each plane i, create a constraint over the pairs of flights to see if they are feasible
         # insert each pair of flights into a table constraint
         for i in range(len(var_array)):
@@ -431,15 +438,15 @@ def solve_planes(planes_problem, algo, allsolns,
                 constraint_list.extend([cnstr_3])
 
         # C4: all planes must be serviced within a certain minimum frequency
-        # use NValuesConstraint with lower_bound = 1 (you can stop at a maintenance depot after every flight) 
-        # and upper_bound = min_maintenance_frequency (you can go at most min_maintenance_frequency # flights before visiting a maintenance depot)
         required_values = []
 
         # if number of flights flown by that plane is less than min_maintenance_frequency, then it doesn't need any maintenance
         required_values.append("none")
 
         # add the maintenance flights
-        required_values.extend(maintenance_flights)
+        for flight in maintenance_flights:
+            required_values.append(flight)
+        #required_values.extend(maintenance_flights)
 
         # for each plane i, use a sliding window with width min_maintenance_frequency to check if the flights within that window satisfy the constraint
         for i in range(len(var_array)):
@@ -447,9 +454,14 @@ def solve_planes(planes_problem, algo, allsolns,
                 sliding_window = var_array[i][j : j + min_maintenance_frequency]
         
                 # use NValuesConstraint to require that every min_maintenance_frequency, a plane needs to fly one of the maintenance_flights
-                cnstr_4 = NValuesConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
+                """ cnstr_4 = NValuesConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
                                             scope=sliding_window, required_values=required_values, \
-                                            lower_bound=1, upper_bound=min_maintenance_frequency)
+                                            lower_bound=1, upper_bound=min_maintenance_frequency) """
+                
+                # MaintenanceConstraint.__init__(scope, min_maintenance_frequency, maintenance_flights)
+                cnstr_4 = MaintenanceConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
+                                                scope=sliding_window, min_maintenance_frequency = min_maintenance_frequency, \
+                                                maintenance_flights = maintenance_flights)
                 constraint_list.extend([cnstr_4])
 
         # C5: each flight must be scheduled and 
@@ -485,18 +497,18 @@ def solve_planes(planes_problem, algo, allsolns,
             a_solution = []
             sol_dict = dict() # format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
             
-            for (var, val) in solution:
+            for (var, value) in solution:
                 name = var.name() # will be in format: "Plane AC-number Flight number number"
                 name = name.split(" ") # will be in format ['Plane', AC-##, 'Flight', 'number', #]
                 plane_name = name[1] # retrieve the plane's name (ie: AC-number)
                 flight_position = name[-1] # retrieve the flight's position (ie: number)
-                # val is the flght itself (ie: AC001, AC002, etc.)
+                # value is the flght itself (ie: AC001, AC002, etc.)
 
                 if plane_name in sol_dict:
-                    sol_dict[plane_name].append([flight_position, val])
+                    sol_dict[plane_name].append([flight_position, value])
                 else:
                     sol_dict[plane_name] = []
-                    sol_dict[plane_name].append([flight_position, val])
+                    sol_dict[plane_name].append([flight_position, value])
             
             # order a_solution by increasing plane name
             plane_names = list(sol_dict.keys())

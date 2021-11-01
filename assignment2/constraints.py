@@ -364,43 +364,121 @@ class NValuesConstraint(Constraint):
         x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
 
         return x
-# plane_scheduling.py constraints
 
-""" class ValidInitialFlightsConstraint(Constraint):
-    def __init__(self, name, scope, valid_flights):
+# plane_scheduling.py constraints
+class FeasibleConstraint(Constraint):
+    #def __init__(self, name, scope, flown_flights, all_flights):
+    def __init__(self, name, scope, valid_values):
         Constraint.__init__(self, name, scope)
-        self._name = 'ValidInitialFlights_' + name
-        self._scope = scope # the flights flown by a plane
-        self._valid_flights = valid_flights
+        self._name = 'Feasible_' + name
+        self._scope = scope # a range of min_maintenance_frequency flights
+        self._valid_values = valid_values
 
     def check(self):
         for v in self.scope():
             if v.isAssigned():
                 value = v.getValue()
-                if value in self._valid_flights:
+
+                if value in self._valid_values:
                     return True
+                else:
+                    return False
             else:
-                return True
-        return False
-    
+                return True  
+                
+
     def hasSupport(self, var, val):
         '''check if var=val has an extension to an assignment of the
            other variable in the constraint that satisfies the constraint'''
-           
+
         if var not in self.scope():
             return True # var=val has support on any constraint it does not participate in
 
-        def valid_first_flight(l):
-            for (variable, value) in l:
-                if value in self._valid_flights:
+        def check_full_assignment(l):
+            for var, value in l:
+                if value in self._valid_values:
                     return True
-            return False
-        
+                else:
+                    return False
+            
+            return True
+
         varsToAssign = self.scope()
         varsToAssign.remove(var)
-        x = findvals(varsToAssign, [(var, val)], valid_first_flight, valid_first_flight)
+        x = findvals(varsToAssign, [(var, val)], check_full_assignment)
 
-        return x """
+        return x
+
+class MaintenanceConstraint(Constraint):
+    #def __init__(self, name, scope, flown_flights, all_flights):
+    def __init__(self, name, scope, min_maintenance_frequency, maintenance_flights):
+        Constraint.__init__(self, name, scope)
+        self._name = 'Maintenance_' + name
+        self._scope = scope # a range of min_maintenance_frequency flights
+        self.min_maintenance_frequency = min_maintenance_frequency
+        self.maintenance_flights = maintenance_flights
+
+    def check(self):
+        # v = variable = plane (ex: AC-1)
+        num_non_maintenance_flights = 0
+
+        for v in self.scope():
+            if v.isAssigned():
+                value = v.getValue()
+                
+                # last flight in a sequence
+                # if we didn't return yet, then the sequence is valid wrt. the maintenance frequency
+                # so return True
+                if value == "none":
+                    return True
+
+                # haven't encountered a maintenance depot, increment the counter
+                if value not in self.maintenance_flights:
+                    num_non_maintenance_flights += 1
+                else:
+                    # reset the counter if we encounter a maintenance depot
+                    num_non_maintenance_flights = 0
+
+                if num_non_maintenance_flights >= self.min_maintenance_frequency:
+                    return False
+            else:
+                return True
+        
+        return True
+
+    def hasSupport(self, var, val):
+        '''check if var=val has an extension to an assignment of the
+           other variable in the constraint that satisfies the constraint'''
+
+        if var not in self.scope():
+            return True # var=val has support on any constraint it does not participate in
+
+        def check_full_assignment(l):
+            num_non_maintenance_flights = 0
+            for var, value in l:
+                # last flight in a sequence
+                # if we didn't return yet, then the sequence is valid wrt. the maintenance frequency
+                # so return True
+                if value == "none":
+                    return True
+                
+                # haven't encountered a maintenance depot, increment the counter
+                if value not in self.maintenance_flights:
+                    num_non_maintenance_flights += 1
+                else:
+                    # reset the counter if we encounter a maintenance depot
+                    num_non_maintenance_flights = 0
+
+                if num_non_maintenance_flights >= self.min_maintenance_frequency:
+                    return False
+            
+            return True
+
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], check_full_assignment)
+
+        return x
 
 class EachFlightScheduledOnceConstraint(Constraint):
     #def __init__(self, name, scope, flown_flights, all_flights):
@@ -452,7 +530,7 @@ class EachFlightScheduledOnceConstraint(Constraint):
         def check_all_flights_flown(l):
             assignments = dict()
 
-            for (variable, value) in l:
+            for (var, value) in l:
                 # ####
                 if value != "none":
                     if value in assignments:
