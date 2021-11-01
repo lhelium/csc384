@@ -1,5 +1,6 @@
 from csp import Constraint, Variable
 import util
+from collections import Counter
 
 class TableConstraint(Constraint):
     '''General type of constraint that can be use to implement any type of
@@ -88,6 +89,7 @@ class QueensConstraint(Constraint):
     def queensCheck(self, vali, valj):
         diag = abs(vali - valj) == abs(self.i - self.j)
         return not diag and vali != valj
+
     def hasSupport(self, var, val):
         '''check if var=val has an extension to an assignment of the
            other variable in the constraint that satisfies the constraint'''
@@ -120,7 +122,28 @@ class QueensTableConstraint(TableConstraint):
     #the existing function signatures.
     def __init__(self, name, qi, qj, i, j):
         self._name = "Queen_" + name
-        util.raiseNotDefined()
+        #util.raiseNotDefined()
+        scope = [qi, qj]
+        #TableConstraint.__init__(self, name, scope, satisfyingAssignments)
+        satisfying_assignments = self.satisfyingAssignments(qi, qj, i, j)
+        TableConstraint.__init__(self, name=name, scope=scope, satisfyingAssignments=satisfying_assignments)
+
+    # NQueens constraint: 2 queens cannot be on the same row, same column, or the same diagonal
+    # same row: i != j, already guaranteed by the problem setup so we don't need to check this
+    # same column: Qi != Qj for all i != j
+    # same diagonal: abs(Qi - Qj) != abs(i - j)
+    def satisfyingAssignments(self, qi, qj, i, j):
+        satisfying_assignments = []
+
+        for qi_col in qi.domain():
+            for qj_col in qj.domain():
+                # check column constraint
+                    if qi_col != qj_col:
+                        # check diagonal constraint
+                        if abs(qi_col - qj_col) != abs(i - j):
+                            satisfying_assignments.append([qi_col, qj_col]) 
+        
+        return satisfying_assignments
 
 class NeqConstraint(Constraint):
     '''Neq constraint between two variables'''
@@ -270,8 +293,28 @@ class NValuesConstraint(Constraint):
         self._lb = lower_bound
         self._ub = upper_bound
 
+    # check() vs hasSupport(var, val):
+    # check(): returns True if the values currently assigned to the variables in scope() satisfy the constraint (ie: constraint not violated)
+    #    used in BT, FC
+    # hasSupport(var, val): returns True if var = val assignment has a shupporting tuple in the constraint
+    #    used only by the GACEnforce algo for determining if a constraint is GAC
+
     def check(self):
-        util.raiseNotDefined()
+        #util.raiseNotDefined()
+
+        if self.numUnassigned() > 0:
+            return True
+        
+        num_occurrences = 0
+
+        for v in self.scope():
+            if v.getValue() in self._required:
+                num_occurrences += 1
+
+        if num_occurrences >= self._lb and num_occurrences <= self._ub:
+            return True
+        else:
+            return False
 
     def hasSupport(self, var, val):
         '''check if var=val has an extension to an assignment of the
@@ -280,5 +323,234 @@ class NValuesConstraint(Constraint):
            HINT: check the implementation of AllDiffConstraint.hasSupport
                  a similar approach is applicable here (but of course
                  there are other ways as well)
+
+            NValues is like AllDiff if it was instead N_M_Diff
+            i.e., there are N <= actual number of variables with the value <= M
         '''
-        util.raiseNotDefined()
+        #util.raiseNotDefined()
+
+        if var not in self.scope():
+            return True # var=val has support on any constraint it does not participate in
+
+        # check if lower bound is satisfied
+        def lower_bound_satisfied(l):
+            num_vals = 0
+
+            for (variable, value) in l:
+                if value in self._required:
+                    num_vals += 1
+            
+            if num_vals >= self._lb and num_vals <= self._ub:
+                return True
+            else:
+                return False
+
+        # check if upper bound is satisfied
+        def upper_bound_satisfied(l):
+            num_vals = 0
+
+            for (variable, value) in l:
+                if value in self._required:
+                    num_vals += 1
+            
+            if num_vals <= self._ub:
+                return True
+            else:
+                return False
+        
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+
+        x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
+
+        return x
+
+# plane_scheduling.py constraints
+class FeasibleConstraint(Constraint):
+    #def __init__(self, name, scope, flown_flights, all_flights):
+    def __init__(self, name, scope, valid_values):
+        Constraint.__init__(self, name, scope)
+        self._name = 'Feasible_' + name
+        self._scope = scope # a range of min_maintenance_frequency flights
+        self._valid_values = valid_values
+
+    def check(self):
+        for v in self.scope():
+            if v.isAssigned():
+                value = v.getValue()
+
+                if value in self._valid_values:
+                    return True
+                else:
+                    return False
+            else:
+                return True  
+                
+
+    def hasSupport(self, var, val):
+        '''check if var=val has an extension to an assignment of the
+           other variable in the constraint that satisfies the constraint'''
+
+        if var not in self.scope():
+            return True # var=val has support on any constraint it does not participate in
+
+        def check_full_assignment(l):
+            for var, value in l:
+                if value in self._valid_values:
+                    return True
+                else:
+                    return False
+            
+            return True
+
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], check_full_assignment)
+
+        return x
+
+class MaintenanceConstraint(Constraint):
+    #def __init__(self, name, scope, flown_flights, all_flights):
+    def __init__(self, name, scope, min_maintenance_frequency, maintenance_flights):
+        Constraint.__init__(self, name, scope)
+        self._name = 'Maintenance_' + name
+        self._scope = scope # a range of min_maintenance_frequency flights
+        self.min_maintenance_frequency = min_maintenance_frequency
+        self.maintenance_flights = maintenance_flights
+
+    def check(self):
+        # v = variable = plane (ex: AC-1)
+        num_non_maintenance_flights = 0
+
+        for v in self.scope():
+            if v.isAssigned():
+                value = v.getValue()
+                
+                # last flight in a sequence
+                # if we didn't return yet, then the sequence is valid wrt. the maintenance frequency
+                # so return True
+                if value == "none":
+                    return True
+
+                # haven't encountered a maintenance depot, increment the counter
+                if value not in self.maintenance_flights:
+                    num_non_maintenance_flights += 1
+                else:
+                    # reset the counter if we encounter a maintenance depot
+                    num_non_maintenance_flights = 0
+
+                if num_non_maintenance_flights >= self.min_maintenance_frequency:
+                    return False
+            else:
+                return True
+        
+        return True
+
+    def hasSupport(self, var, val):
+        '''check if var=val has an extension to an assignment of the
+           other variable in the constraint that satisfies the constraint'''
+
+        if var not in self.scope():
+            return True # var=val has support on any constraint it does not participate in
+
+        def check_full_assignment(l):
+            num_non_maintenance_flights = 0
+            for var, value in l:
+                # last flight in a sequence
+                # if we didn't return yet, then the sequence is valid wrt. the maintenance frequency
+                # so return True
+                if value == "none":
+                    return True
+                
+                # haven't encountered a maintenance depot, increment the counter
+                if value not in self.maintenance_flights:
+                    num_non_maintenance_flights += 1
+                else:
+                    # reset the counter if we encounter a maintenance depot
+                    num_non_maintenance_flights = 0
+
+                if num_non_maintenance_flights >= self.min_maintenance_frequency:
+                    return False
+            
+            return True
+
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], check_full_assignment)
+
+        return x
+
+class EachFlightScheduledOnceConstraint(Constraint):
+    #def __init__(self, name, scope, flown_flights, all_flights):
+    def __init__(self, name, scope, all_flights):
+        Constraint.__init__(self, name, scope)
+        self._name = 'EachFlightScheduledOnce_' + name
+        self._scope = scope # the planes
+        self._all_flights = all_flights
+        self.total_num_flights = len(set(all_flights))
+
+    def check(self):
+        assignments = dict()
+
+        # v = variable = plane (ex: AC-1)
+        for v in self.scope():
+            if v.isAssigned():
+                value = v.getValue()
+
+                # count the number of times a value/flight occurs
+                # ####
+                if value != "none":
+                    if value in assignments:
+                        assignments[value] += 1
+                    else:
+                        assignments[value] = 1
+            else:
+                return True
+
+        # not all flights have been flown
+        if len(assignments) < self.total_num_flights:
+            return False
+        
+        # a flight has been flown more than once
+        for key, val in assignments.items():
+            if val > 1:
+                return False
+
+        return True
+
+    def hasSupport(self, var, val):
+        '''check if var=val has an extension to an assignment of the
+           other variable in the constraint that satisfies the constraint'''
+
+        if var not in self.scope():
+            return True # var=val has support on any constraint it does not participate in
+
+        # final assignments
+        # assignment valid only if the flight hasn't been flown yet
+        def check_all_flights_flown(l):
+            assignments = dict()
+
+            for (var, value) in l:
+                # ####
+                if value != "none":
+                    if value in assignments:
+                        assignments[value] += 1
+                    else:
+                        assignments[value] = 1
+            
+            # not all flights have been flown
+            if len(assignments) < self.total_num_flights:
+                return False
+            
+            # a flight has been flown more than once
+            for key, val in assignments.items():
+                if val > 1:
+                    return False
+
+            return True
+
+        varsToAssign = self.scope()
+        varsToAssign.remove(var)
+        x = findvals(varsToAssign, [(var, val)], check_all_flights_flown)
+
+        return x

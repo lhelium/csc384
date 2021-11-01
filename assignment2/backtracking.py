@@ -72,21 +72,27 @@ def bt_search(algo, csp, variableHeuristic, allSolutions, trace):
     if variableHeuristic not in varHeuristics:
         print("Error. Unknown variable heursitics {}. Must be one of {}.".format(
             variableHeuristic, varHeuristics))
+    
     if algo not in algorithms:
         print("Error. Unknown algorithm heursitics {}. Must be one of {}.".format(
             algo, algorithms))
 
     uv = UnassignedVars(variableHeuristic,csp)
     Variable.clearUndoDict()
+    
     for v in csp.variables():
         v.reset()
+    
     if algo == 'BT':
          solutions = BT(uv, csp, allSolutions, trace)
+    
     elif algo == 'FC':
         for cnstr in csp.constraints():
             if cnstr.arity() == 1:
                 FCCheck(cnstr, None, None)  #FC with unary constraints at the root
+        
         solutions = FC(uv, csp, allSolutions, trace)
+    
     elif algo == 'GAC':
         GacEnforce(csp.constraints(), csp, None, None) #GAC at the root
         solutions = GAC(uv, csp, allSolutions, trace)
@@ -114,27 +120,37 @@ def BT(unAssignedVars, csp, allSolutions, trace):
         for v in csp.variables():
             soln.append((v, v.getValue()))
         return [soln]  #each call returns a list of solutions found
+    
     bt_search.nodesExplored += 1
     solns = []         #so far we have no solutions recursive calls
     nxtvar = unAssignedVars.extract()
+    
     if trace: print("==>Trying {}".format(nxtvar.name()))
+    
     for val in nxtvar.domain():
         if trace: print("==> {} = {}".format(nxtvar.name(), val))
+        
         nxtvar.setValue(val)
         constraintsOK = True
+        
         for cnstr in csp.constraintsOf(nxtvar):
             if cnstr.numUnassigned() == 0:
                 if not cnstr.check():
                     constraintsOK = False
+                    
                     if trace: print("<==falsified constraint\n")
+                    
                     break
         if constraintsOK:
             new_solns = BT(unAssignedVars, csp, allSolutions, trace)
+            
             if new_solns:
                 solns.extend(new_solns)
+            
             if len(solns) > 0 and not allSolutions:
                 break  #don't bother with other values of nxtvar
                        #as we found a soln.
+    
     nxtvar.unAssign()
     unAssignedVars.insert(nxtvar)
     return solns
@@ -142,12 +158,17 @@ def BT(unAssignedVars, csp, allSolutions, trace):
 def FCCheck(cnstr, reasonVar, reasonVal):
     if cnstr.numUnassigned() != 1:
         print("Error FCCheck called on constraint {} with {} neq 1 unassigned vars".format(cnstr.name(), cnstr.numUnassignedVars))
+    
     var = cnstr.unAssignedVars()[0]
+    
     for val in var.curDomain():
         var.setValue(val)
+        
         if not cnstr.check():
             var.pruneValue(val, reasonVar, reasonVal)
-        var.unAssign()  #NOTE WE MUST UNDO TRIAL ASSIGNMENT
+        
+        var.unAssign()  # NOTE WE MUST UNDO TRIAL ASSIGNMENT
+    
     if var.curDomainSize() == 0:
         return "DWO"
     return "OK"
@@ -173,7 +194,48 @@ def FC(unAssignedVars, csp, allSolutions, trace):
     #Implementing handling of the trace parameter is optional
     #but it can be useful for debugging
 
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    if unAssignedVars.empty():
+        if trace: print("{} Solution Found".format(csp.name()))
+        soln = []
+        for v in csp.variables():
+            soln.append((v, v.getValue()))
+        return [soln]  #each call returns a list of solutions found
+    
+    bt_search.nodesExplored += 1
+    solns = []         #so far we have no solutions recursive calls
+    nxtvar = unAssignedVars.extract()
+    
+    if trace: print("==>Trying {}".format(nxtvar.name()))
+    
+    for val in nxtvar.curDomain(): # only check the values in the current domain
+        if trace: print("==> {} = {}".format(nxtvar.name(), val))
+        
+        nxtvar.setValue(val)
+        noDWO = True
+
+        for cnstr in csp.constraintsOf(nxtvar):
+            if cnstr.numUnassigned() == 1: # FCCheck precondition
+                # FCCheck(cnstr, reasonVar, reasonVal)
+                if FCCheck(cnstr, nxtvar, val) == "DWO":
+                    noDWO = False
+                    if trace: print("<==falsified constraint\n")
+                    break
+        if noDWO:
+            new_solns = FC(unAssignedVars, csp, allSolutions, trace)
+            if new_solns:
+                solns.extend(new_solns)
+            if len(solns) > 0 and not allSolutions:
+                nxtvar.restoreValues(nxtvar, val) # need to restore values
+                break  #don't bother with other values of nxtvar
+                       #as we found a soln.
+        
+        nxtvar.restoreValues(nxtvar, val) # need to restore values
+
+    nxtvar.unAssign()
+    unAssignedVars.insert(nxtvar)
+    return solns
 
 def GacEnforce(constraints, csp, reasonVar, reasonVal):
     '''Establish GAC on constraints by pruning values
@@ -183,7 +245,23 @@ def GacEnforce(constraints, csp, reasonVar, reasonVal):
     #your implementation for Question 3 goes in this function body
     #you must not change the function parameters
     #ensure that you return one of "OK" or "DWO"
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    while len(constraints) > 0:
+        constraint = constraints.pop()
+        for var in constraint.scope():
+            for val in var.curDomain():
+                if not constraint.hasSupport(var, val):
+                    var.pruneValue(val, reasonVar, reasonVal)
+
+                    if var.curDomainSize() == 0:
+                        return "DWO"
+                    
+                    for recheck in csp.constraintsOf(var):
+                        if recheck != constraint and not recheck in constraints:
+                            constraints.append(recheck)
+    
+    return "OK"
 
 def GAC(unAssignedVars, csp, allSolutions, trace):
     '''GAC search.
@@ -205,4 +283,41 @@ def GAC(unAssignedVars, csp, allSolutions, trace):
     #implementing support for "trace" is optional, but it might
     #help you in debugging
 
-    util.raiseNotDefined()
+    #util.raiseNotDefined()
+
+    if unAssignedVars.empty():
+        if trace: print("{} Solution Found".format(csp.name()))
+        soln = []
+        for v in csp.variables():
+            soln.append((v, v.getValue()))
+        return [soln]  #each call returns a list of solutions found
+    
+    bt_search.nodesExplored += 1
+    solns = []         #so far we have no solutions recursive calls
+    nxtvar = unAssignedVars.extract()
+    
+    if trace: print("==>Trying {}".format(nxtvar.name()))
+    
+    for val in nxtvar.curDomain(): # only check the values in the current domain
+        if trace: print("==> {} = {}".format(nxtvar.name(), val))
+        
+        nxtvar.setValue(val)
+        noDWO = True
+
+        if GacEnforce(csp.constraintsOf(nxtvar), csp, nxtvar, val) == "DWO":
+            noDWO = False
+        
+        if noDWO:
+            new_solns = GAC(unAssignedVars, csp, allSolutions, trace)
+
+            if new_solns:
+                solns.extend(new_solns)
+            if len(solns) > 0 and not allSolutions:
+                nxtvar.restoreValues(nxtvar, val) # need to restore values
+                break
+
+        nxtvar.restoreValues(nxtvar, val) # need to restore values
+
+    nxtvar.unAssign()
+    unAssignedVars.insert(nxtvar)
+    return solns

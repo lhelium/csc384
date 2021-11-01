@@ -163,6 +163,25 @@ p7 = csp_problems.PlaneProblem(
     #Min maintenance frequency
     3)
 
+p10 = csp_problems.PlaneProblem(
+    #planes
+    ['AC-1', 'AC-2'],
+    #the flights
+    ['AC001', 'AC002', 'AC003', 'AC004', 'AC005'],
+    #flights each plane can fly
+    [['AC-1', 'AC001', 'AC002', 'AC003', 'AC004', 'AC005'],
+     ['AC-2', 'AC001', 'AC002', 'AC004', 'AC005']],
+    #flights each plane can start with
+    [['AC-1', 'AC001'], ['AC-2', 'AC004', 'AC005']],
+    #Flights that can follow each other
+    [('AC002', 'AC001'), ('AC003', 'AC002'), 
+     ('AC001', 'AC003'), ('AC004', 'AC003'), 
+     ('AC005', 'AC004'), ('AC004', 'AC005')],
+    #maintenance depots at end of these flights
+    ['AC003', 'AC005'],
+    #min maintenance frequency
+    3)
+
 import itertools
 m=1
 n=20
@@ -213,7 +232,7 @@ p9 = csp_problems.PlaneProblem(
     1)
 
 
-problems = [p1,p2,p3,p4,p5,p6,p7,p8,p9]
+problems = [p1,p2,p3,p4,p5,p6,p7,p8,p9,p10]
 
 def check_plane_solution(pp, s):
     '''Check is solution is a valid solution to plane problem pp.
