@@ -368,16 +368,28 @@ class NValuesConstraint(Constraint):
 # plane_scheduling.py constraints
 class MaintenanceConstraint(Constraint):
     #def __init__(self, name, scope, flown_flights, all_flights):
-    def __init__(self, name, scope, min_maintenance_frequency, maintenance_flights):
+    def __init__(self, name, scope, min_maintenance_frequency, maintenance_flights, plane_can_fly):
         Constraint.__init__(self, name, scope)
         self._name = 'Maintenance_' + name
         self._scope = scope # a range of min_maintenance_frequency flights
         self.min_maintenance_frequency = min_maintenance_frequency
         self.maintenance_flights = maintenance_flights
+        self._plane_can_fly= plane_can_fly
 
     def check(self):
         # v = variable = plane (ex: AC-1)
         num_non_maintenance_flights = 0
+
+        # check if the maintenance flights can be flown by a plane
+        non_flyable_maintenance_flights = 0
+        for flight in self.maintenance_flights:
+            if flight not in self._plane_can_fly:
+                non_flyable_maintenance_flights += 1
+        
+        # if there is at least 1 maintenance flight that can be flown by a plane, continue with the rest of the constraint check
+        # otherwise, if no maintenance flight can be flown by a plane, return False
+        if non_flyable_maintenance_flights >= len(self.maintenance_flights):
+            return False
 
         for v in self.scope():
             if v.isAssigned():
@@ -412,6 +424,18 @@ class MaintenanceConstraint(Constraint):
 
         def check_full_assignment(l):
             num_non_maintenance_flights = 0
+            
+            # check if the maintenance flights can be flown by a plane
+            non_flyable_maintenance_flights = 0
+            for flight in self.maintenance_flights:
+                if flight not in self._plane_can_fly:
+                    non_flyable_maintenance_flights += 1
+            
+            # if there is at least 1 maintenance flight that can be flown by a plane, continue with the rest of the constraint check
+            # otherwise, if no maintenance flight can be flown by a plane, return False
+            if non_flyable_maintenance_flights >= len(self.maintenance_flights):
+                return False
+
             for var, value in l:
                 # last flight in a sequence
                 # if we didn't return yet, then the sequence is valid wrt. the maintenance frequency
@@ -433,7 +457,7 @@ class MaintenanceConstraint(Constraint):
 
         varsToAssign = self.scope()
         varsToAssign.remove(var)
-        x = findvals(varsToAssign, [(var, val)], check_full_assignment)
+        x = findvals(varsToAssign, [(var, val)], check_full_assignment, check_full_assignment)
 
         return x
 
@@ -455,7 +479,6 @@ class EachFlightScheduledOnceConstraint(Constraint):
                 value = v.getValue()
 
                 # count the number of times a value/flight occurs
-                # ####
                 if value != "none":
                     if value in assignments:
                         assignments[value] += 1
@@ -488,7 +511,6 @@ class EachFlightScheduledOnceConstraint(Constraint):
             assignments = dict()
 
             for (var, value) in l:
-                # ####
                 if value != "none":
                     if value in assignments:
                         assignments[value] += 1
@@ -506,8 +528,26 @@ class EachFlightScheduledOnceConstraint(Constraint):
 
             return True
 
+        def check_some_flights_flown(l):
+            assignments = dict()
+
+            for (var, value) in l:
+                if value != "none":
+                    if value in assignments:
+                        assignments[value] += 1
+                    else:
+                        assignments[value] = 1
+            # don't check for whether a flight hasn't been flown because maybe it hasn't been assigned
+
+            # a flight has been flown more than once
+            for key, val in assignments.items():
+                if val > 1:
+                    return False
+
+            return True
+
         varsToAssign = self.scope()
         varsToAssign.remove(var)
-        x = findvals(varsToAssign, [(var, val)], check_all_flights_flown)
+        x = findvals(varsToAssign, [(var, val)], check_all_flights_flown, check_some_flights_flown)
 
         return x

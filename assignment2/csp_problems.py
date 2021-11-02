@@ -395,14 +395,14 @@ def solve_planes(planes_problem, algo, allsolns,
                 if j == 0:
                     valid_flights = [flight for flight in plane_can_fly if flight in plane_can_start]
 
-                    for flight in valid_flights:
-                        dom.append(flight)
-                    #dom.extend(valid_flights)
+                    """ for flight in valid_flights:
+                        dom.append(flight) """
+                    dom.extend(valid_flights)
                     
                 else:
-                    for flight in plane_can_fly:
-                        dom.append(flight)
-                    #dom.extend(plane_can_fly)
+                    """ for flight in plane_can_fly:
+                        dom.append(flight) """
+                    dom.extend(plane_can_fly)
                 
                 var = Variable("Plane {} Flight number {}".format(planes[i], j), dom)
                 var_array[i].append(var)
@@ -444,24 +444,19 @@ def solve_planes(planes_problem, algo, allsolns,
         required_values.append("none")
 
         # add the maintenance flights
-        for flight in maintenance_flights:
-            required_values.append(flight)
-        #required_values.extend(maintenance_flights)
+        """ for flight in maintenance_flights:
+            required_values.append(flight) """
+        required_values.extend(maintenance_flights)
 
         # for each plane i, use a sliding window with width min_maintenance_frequency to check if the flights within that window satisfy the constraint
         for i in range(len(var_array)):
             for j in range(len(var_array[i]) - min_maintenance_frequency + 1):
                 sliding_window = var_array[i][j : j + min_maintenance_frequency]
-        
-                # use NValuesConstraint to require that every min_maintenance_frequency, a plane needs to fly one of the maintenance_flights
-                """ cnstr_4 = NValuesConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
-                                            scope=sliding_window, required_values=required_values, \
-                                            lower_bound=1, upper_bound=min_maintenance_frequency) """
-                
+
                 # MaintenanceConstraint.__init__(scope, min_maintenance_frequency, maintenance_flights)
                 cnstr_4 = MaintenanceConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
                                                 scope=sliding_window, min_maintenance_frequency = min_maintenance_frequency, \
-                                                maintenance_flights = maintenance_flights)
+                                                maintenance_flights = maintenance_flights, plane_can_fly=can_fly[planes[i]])
                 constraint_list.extend([cnstr_4])
 
         # C5: each flight must be scheduled and 
@@ -469,10 +464,8 @@ def solve_planes(planes_problem, algo, allsolns,
         vars = [var for row in var_array for var in row]
         
         cnstr_5_6 = EachFlightScheduledOnceConstraint(name="C5_C6", scope=vars, all_flights=flights)
+        
         constraint_list.extend([cnstr_5_6])
-        """ for flight in flights:
-            cnstr_5_6 = NValuesConstraint(name="C5_C6", scope=vars, required_values=[flight], lower_bound=1, upper_bound=1)
-            constraint_list.extend([cnstr_5_6]) """
 
         csp = CSP("PlaneScheduling", vars, constraint_list)
         return csp
@@ -495,7 +488,7 @@ def solve_planes(planes_problem, algo, allsolns,
             #Convert each solution into a list of lists specifying a schedule
             #for each plane in the format described above.
             a_solution = []
-            sol_dict = dict() # format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
+            sol_dict = dict() # desired format: {plane_name: (flight_position, flight_name), (flight_position, flight_name), ...}
             
             for (var, value) in solution:
                 name = var.name() # will be in format: "Plane AC-number Flight number number"
@@ -504,10 +497,10 @@ def solve_planes(planes_problem, algo, allsolns,
                 flight_position = name[-1] # retrieve the flight's position (ie: number)
                 # value is the flght itself (ie: AC001, AC002, etc.)
 
-                if plane_name in sol_dict:
+                if plane_name not in sol_dict:
+                    sol_dict[plane_name] = []
                     sol_dict[plane_name].append([flight_position, value])
                 else:
-                    sol_dict[plane_name] = []
                     sol_dict[plane_name].append([flight_position, value])
             
             # order a_solution by increasing plane name
