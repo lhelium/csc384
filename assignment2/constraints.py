@@ -293,12 +293,6 @@ class NValuesConstraint(Constraint):
         self._lb = lower_bound
         self._ub = upper_bound
 
-    # check() vs hasSupport(var, val):
-    # check(): returns True if the values currently assigned to the variables in scope() satisfy the constraint (ie: constraint not violated)
-    #    used in BT, FC
-    # hasSupport(var, val): returns True if var = val assignment has a shupporting tuple in the constraint
-    #    used only by the GACEnforce algo for determining if a constraint is GAC
-
     def check(self):
         #util.raiseNotDefined()
 
@@ -323,45 +317,54 @@ class NValuesConstraint(Constraint):
            HINT: check the implementation of AllDiffConstraint.hasSupport
                  a similar approach is applicable here (but of course
                  there are other ways as well)
-
-            NValues is like AllDiff if it was instead N_M_Diff
-            i.e., there are N <= actual number of variables with the value <= M
         '''
         #util.raiseNotDefined()
-
         if var not in self.scope():
             return True # var=val has support on any constraint it does not participate in
 
-        # check if lower bound is satisfied
-        def lower_bound_satisfied(l):
-            num_vals = 0
+        # check if bounds are satisfied
+        def bounds_satisfied(l):
+            num_occurrences = 0
 
             for (variable, value) in l:
                 if value in self._required:
-                    num_vals += 1
+                    num_occurrences += 1
             
-            if num_vals >= self._lb and num_vals <= self._ub:
+            if num_occurrences >= self._lb and num_occurrences <= self._ub:
+                return True
+            else:
+                return False
+
+        """ def lower_bound_satisfied(l):
+            num_occurrences = 0
+
+            for (variable, value) in l:
+                if value in self._required:
+                    num_occurrences += 1
+            
+            if num_occurrences >= self._lb and num_occurrences <= self._ub:
                 return True
             else:
                 return False
 
         # check if upper bound is satisfied
         def upper_bound_satisfied(l):
-            num_vals = 0
+            num_occurrences = 0
 
             for (variable, value) in l:
                 if value in self._required:
-                    num_vals += 1
+                    num_occurrences += 1
             
-            if num_vals <= self._ub:
+            if num_occurrences <= self._ub:
                 return True
             else:
-                return False
+                return False """
         
         varsToAssign = self.scope()
         varsToAssign.remove(var)
 
-        x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
+        #x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
+        x = findvals(varsToAssign, [(var, val)], bounds_satisfied)
 
         return x
 
@@ -388,7 +391,7 @@ class MaintenanceConstraint(Constraint):
         
         # if there is at least 1 maintenance flight that can be flown by a plane, continue with the rest of the constraint check
         # otherwise, if no maintenance flight can be flown by a plane, return False
-        if non_flyable_maintenance_flights >= len(self.maintenance_flights):
+        if non_flyable_maintenance_flights == len(self.maintenance_flights):
             return False
 
         for v in self.scope():
@@ -433,7 +436,7 @@ class MaintenanceConstraint(Constraint):
             
             # if there is at least 1 maintenance flight that can be flown by a plane, continue with the rest of the constraint check
             # otherwise, if no maintenance flight can be flown by a plane, return False
-            if non_flyable_maintenance_flights >= len(self.maintenance_flights):
+            if non_flyable_maintenance_flights == len(self.maintenance_flights):
                 return False
 
             for var, value in l:
@@ -457,6 +460,9 @@ class MaintenanceConstraint(Constraint):
 
         varsToAssign = self.scope()
         varsToAssign.remove(var)
+
+        # there is no such thing as a partial assignment since the maintenance needs to be valid over every sliding window
+        # so pass partial assignment the same function arg as full assignment
         x = findvals(varsToAssign, [(var, val)], check_full_assignment, check_full_assignment)
 
         return x
