@@ -300,7 +300,7 @@ class PlaneProblem:
         for l in flights_at_start:
             self._flights_at_start[l[0]] = l[1:]
 
-        #some useful access functions
+    #some useful access functions
     def can_fly(self, plane):
         '''Return list of flights plane can fly'''
         return self._can_fly[plane]
@@ -445,6 +445,10 @@ def solve_planes(planes_problem, algo, allsolns,
             for j in range(len(var_array[i]) - min_maintenance_frequency + 1):
                 sliding_window = var_array[i][j : j + min_maintenance_frequency]
 
+                """ cnstr_4 = NValuesConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
+                                                scope=sliding_window, required_values = required_values, \
+                                                lower_bound = 1, upper_bound = min_maintenance_frequency) """
+
                 # MaintenanceConstraint.__init__(scope, min_maintenance_frequency, maintenance_flights)
                 cnstr_4 = MaintenanceConstraint(name='C4_plane_{}_sliding_window_{}_{}'.format(planes[i], j, j + min_maintenance_frequency), \
                                                 scope=sliding_window, min_maintenance_frequency = min_maintenance_frequency, \
@@ -486,7 +490,7 @@ def solve_planes(planes_problem, algo, allsolns,
                 name = var.name() # will be in format: "Plane AC-number Flight number number"
                 name = name.split(" ") # will be in format ['Plane', AC-##, 'Flight', 'number', #]
                 plane_name = name[1] # retrieve the plane's name (ie: AC-number)
-                flight_position = name[-1] # retrieve the flight's position (ie: number)
+                flight_position = name[-1] # retrieve the flight's position (ie: #)
                 # value is the flght itself (ie: AC001, AC002, etc.)
 
                 if plane_name not in sol_dict:

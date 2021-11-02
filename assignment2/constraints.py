@@ -335,7 +335,8 @@ class NValuesConstraint(Constraint):
             else:
                 return False
 
-        """ def lower_bound_satisfied(l):
+        # check if lower bound is satisfied
+        def lower_bound_satisfied(l):
             num_occurrences = 0
 
             for (variable, value) in l:
@@ -358,13 +359,13 @@ class NValuesConstraint(Constraint):
             if num_occurrences <= self._ub:
                 return True
             else:
-                return False """
+                return False
         
         varsToAssign = self.scope()
         varsToAssign.remove(var)
 
-        #x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
-        x = findvals(varsToAssign, [(var, val)], bounds_satisfied)
+        x = findvals(varsToAssign, [(var, val)], lower_bound_satisfied, upper_bound_satisfied)
+        #x = findvals(varsToAssign, [(var, val)], bounds_satisfied)
 
         return x
 
@@ -383,6 +384,7 @@ class MaintenanceConstraint(Constraint):
         # v = variable = plane (ex: AC-1)
         num_non_maintenance_flights = 0
 
+        # constraint check that's mostly meant to solve P9 in time
         # check if the maintenance flights can be flown by a plane
         non_flyable_maintenance_flights = 0
         for flight in self.maintenance_flights:
@@ -428,6 +430,7 @@ class MaintenanceConstraint(Constraint):
         def check_full_assignment(l):
             num_non_maintenance_flights = 0
             
+            # constraint check that's mostly meant to solve P9 in time
             # check if the maintenance flights can be flown by a plane
             non_flyable_maintenance_flights = 0
             for flight in self.maintenance_flights:
@@ -543,7 +546,8 @@ class EachFlightScheduledOnceConstraint(Constraint):
                         assignments[value] += 1
                     else:
                         assignments[value] = 1
-            # don't check for whether a flight hasn't been flown because maybe it hasn't been assigned
+
+            # don't check for whether a flight hasn't been flown because maybe it hasn't been assigned yet
 
             # a flight has been flown more than once
             for key, val in assignments.items():
