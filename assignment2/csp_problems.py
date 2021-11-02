@@ -394,14 +394,9 @@ def solve_planes(planes_problem, algo, allsolns,
                 # C2 (unary constraint, can directly modify domain): each plane's initial flight can only be a flight departing from that plane's initial location
                 if j == 0:
                     valid_flights = [flight for flight in plane_can_fly if flight in plane_can_start]
-
-                    """ for flight in valid_flights:
-                        dom.append(flight) """
                     dom.extend(valid_flights)
                     
                 else:
-                    """ for flight in plane_can_fly:
-                        dom.append(flight) """
                     dom.extend(plane_can_fly)
                 
                 var = Variable("Plane {} Flight number {}".format(planes[i], j), dom)
@@ -425,7 +420,6 @@ def solve_planes(planes_problem, algo, allsolns,
         # for planes where no flights are scheduled, no flight -> no flight is a valid connection
         valid_connections.append(["none", "none"])
         
-        # use a table constraint because I don't want to expend the brain power to write a new constraint class for this
         # for each plane i, create a constraint over the pairs of flights to see if they are feasible
         # insert each pair of flights into a table constraint
         for i in range(len(var_array)):
@@ -444,8 +438,6 @@ def solve_planes(planes_problem, algo, allsolns,
         required_values.append("none")
 
         # add the maintenance flights
-        """ for flight in maintenance_flights:
-            required_values.append(flight) """
         required_values.extend(maintenance_flights)
 
         # for each plane i, use a sliding window with width min_maintenance_frequency to check if the flights within that window satisfy the constraint
