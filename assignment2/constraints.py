@@ -120,30 +120,25 @@ class QueensTableConstraint(TableConstraint):
     #your implementation for Question 1 goes
     #inside of this class body. You must not change
     #the existing function signatures.
+
     def __init__(self, name, qi, qj, i, j):
         self._name = "Queen_" + name
         #util.raiseNotDefined()
         scope = [qi, qj]
-        #TableConstraint.__init__(self, name, scope, satisfyingAssignments)
-        satisfying_assignments = self.satisfyingAssignments(qi, qj, i, j)
-        TableConstraint.__init__(self, name=name, scope=scope, satisfyingAssignments=satisfying_assignments)
 
-    # NQueens constraint: 2 queens cannot be on the same row, same column, or the same diagonal
-    # same row: i != j, already guaranteed by the problem setup so we don't need to check this
-    # same column: Qi != Qj for all i != j
-    # same diagonal: abs(Qi - Qj) != abs(i - j)
-    def satisfyingAssignments(self, qi, qj, i, j):
         satisfying_assignments = []
 
         for qi_col in qi.domain():
             for qj_col in qj.domain():
-                # check column constraint
-                    if qi_col != qj_col:
-                        # check diagonal constraint
-                        if abs(qi_col - qj_col) != abs(i - j):
-                            satisfying_assignments.append([qi_col, qj_col]) 
-        
-        return satisfying_assignments
+                # NQueens constraint: 2 queens cannot be on the same row, same column, or the same diagonal
+                # same row: i != j, already guaranteed by the problem setup so we don't need to check this
+                # same column: Qi != Qj for all i != j
+                # same diagonal: abs(Qi - Qj) != abs(i - j)
+                    if qi_col != qj_col and abs(qi_col - qj_col) != abs(i - j):
+                        satisfying_assignments.append([qi_col, qj_col]) 
+                        satisfying_assignments.append([qj_col, qi_col])
+
+        TableConstraint.__init__(self, name=name, scope=scope, satisfyingAssignments=satisfying_assignments)
 
 class NeqConstraint(Constraint):
     '''Neq constraint between two variables'''
