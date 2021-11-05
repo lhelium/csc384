@@ -258,7 +258,7 @@ def GacEnforce(constraints, csp, reasonVar, reasonVal):
                         return "DWO"
                     
                     for recheck in csp.constraintsOf(var):
-                        if recheck != constraint and not recheck in constraints:
+                        if recheck != constraint and recheck not in constraints:
                             constraints.append(recheck)
     
     return "OK"
