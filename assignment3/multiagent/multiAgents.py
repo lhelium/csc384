@@ -73,11 +73,6 @@ class ReflexAgent(Agent):
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
         
-        """print("newPos: {}".format(newPos))
-        print("type(newFood): {}".format(type(newFood)))
-        print("newGhostStates: {}".format(newGhostStates))
-        print("newScaredTimes: {}".format(newScaredTimes))"""
-
         "*** YOUR CODE HERE ***"
         # if successor state is a win state, return a really high number
         # if the successor state is a lose state, return a really low number
@@ -136,33 +131,33 @@ class ReflexAgent(Agent):
 
         # reward: in new position, pacman gains more power by eating a pellet
         if len(newPowerList) < len(curPowerList):
-          score += 15
+          score += len(newPowerList) * 10
 
         # reward: in new position, pacman is closer to the pellet
         if minNewPowerDistance < minCurPowerDistance:
-          score += 10
+          score += minNewPowerDistance * 10
 
         # reward: in new position, ghosts are further away
         if minNewGhostDistance > minCurGhostDistance:
-          score += 50
+          score += minNewGhostDistance * 10
 
         # reward: in new position, pacman is closer to food
         if minNewFoodDistance < minCurFoodDistance:
-          score += 30
+          score += minNewFoodDistance * 10
 
         # if, in new position, more ghosts are scared, closer distance to ghosts is better
         if numNewScaredGhosts > numCurScaredGhosts:
           if minNewGhostDistance > minCurGhostDistance:
-            score += 20
+            score += minNewGhostDistance * 10
           else:
-            score -= 10
+            score -= minNewGhostDistance
 
         # otherwise further distance is better
         else:
           if minNewGhostDistance < minCurGhostDistance:
-            score += 20
+            score += minNewGhostDistance * 10
           else:
-            score -= 10
+            score -= minNewGhostDistance
 
         return score
 
