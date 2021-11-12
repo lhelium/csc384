@@ -47,10 +47,10 @@ class ReflexAgent(Agent):
         bestIndices = [index for index in range(len(scores)) if scores[index] == bestScore]
         chosenIndex = random.choice(bestIndices) # Pick randomly among the best
 
-        "Add more of your code here if you want to"
+        """Add more of your code here if you want to"""
 
         return legalMoves[chosenIndex]
-
+    
     def evaluationFunction(self, currentGameState, action):
         """
         Design a better evaluation function here.
@@ -72,9 +72,103 @@ class ReflexAgent(Agent):
         newFood = successorGameState.getFood()
         newGhostStates = successorGameState.getGhostStates()
         newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
+        
+        """print("newPos: {}".format(newPos))
+        print("type(newFood): {}".format(type(newFood)))
+        print("newGhostStates: {}".format(newGhostStates))
+        print("newScaredTimes: {}".format(newScaredTimes))"""
 
         "*** YOUR CODE HERE ***"
-        return successorGameState.getScore()
+        # if successor state is a win state, return a really high number
+        # if the successor state is a lose state, return a really low number
+        if successorGameState.isWin():
+          score = float("inf")
+          return score
+        elif successorGameState.isLose():
+          score = -float("inf")
+          return score
+        
+        # get current position
+        curPos = currentGameState.getPacmanPosition()
+
+        # distance to food in current position
+        curFoodList = currentGameState.getFood().asList()
+        curFoodDistance = [manhattanDistance(food, curPos) for food in curFoodList]
+        minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else float("inf")
+
+        # distance to food in new position
+        newFoodList = newFood.asList()
+        newFoodDistance = [manhattanDistance(food, newPos) for food in newFoodList]
+        minNewFoodDistance = min(newFoodDistance) if len(newFoodDistance) > 0 else float("inf")
+
+        # distance from ghosts in current position
+        curGhostStates = currentGameState.getGhostStates()
+        curGhostPos = [ghost.getPosition() for ghost in curGhostStates]
+        curGhostDistance = [manhattanDistance(ghost, curPos) for ghost in curGhostPos]
+        minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
+
+        # number of scared ghosts in current position
+        curScaredTimes = [ghostState.scaredTimer for ghostState in curGhostStates]
+        numCurScaredGhosts = sum(curScaredTimes)
+
+        # distance from ghosts in new position
+        newGhostPos = [ghost.getPosition() for ghost in newGhostStates]
+        newGhostDistance = [manhattanDistance(ghost, newPos) for ghost in newGhostPos]
+        minNewGhostDistance = min(newGhostDistance) if len(newGhostDistance) > 0 else float("inf")
+        
+        # number of scared ghosts in new position
+        numNewScaredGhosts = sum(newScaredTimes)
+
+        # distance from power pellets in current position
+        curPowerList = currentGameState.getCapsules()
+        curPowerDistance = [manhattanDistance(pellet, curPos) for pellet in curPowerList]
+        minCurPowerDistance = min(curPowerDistance) if len(curPowerDistance) > 0 else float("inf")
+        
+        # distance from power pellets in new position
+        newPowerList = successorGameState.getCapsules()
+        newPowerDistance = [manhattanDistance(pellet, newPos) for pellet in newPowerList]
+        minNewPowerDistance = min(newPowerDistance)  if len(newPowerDistance) > 0 else float("inf")
+
+        score = 0
+
+        # add score of new position relative to current position
+        score += (successorGameState.getScore() - currentGameState.getScore())
+
+        # reward: in new position, pacman gains more power by eating a power pellet
+        if len(newPowerList) < len(curPowerList):
+          score += 15
+
+        # reward: in new position, pacman is closer to the power pellet
+        if minNewPowerDistance < minCurPowerDistance:
+            score += 10
+
+        """ # reward: in new position, ghosts are further away
+        if minNewGhostDistance > minCurGhostDistance:
+          score += 10 """
+
+        # reward: in new position, pacman ate food
+        if len(newFoodList) < len(curFoodList):
+          score += 50
+
+        # reward: in new position, pacman is closer to food
+        if minNewFoodDistance < minCurFoodDistance:
+          score += 30
+
+        # if, in new position, more ghosts are scared, closer distance to ghosts is better
+        if numNewScaredGhosts > numCurScaredGhosts:
+          if minNewGhostDistance > minCurGhostDistance:
+            score += 20
+          else:
+            score -= 20
+
+        # otherwise further distance is better
+        else:
+          if minNewGhostDistance < minCurGhostDistance:
+            score += 20 
+          else:
+            score -= 20
+
+        return score
 
 def scoreEvaluationFunction(currentGameState):
     """
