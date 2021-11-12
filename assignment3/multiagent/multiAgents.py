@@ -134,20 +134,16 @@ class ReflexAgent(Agent):
         # add score of new position relative to current position
         score += (successorGameState.getScore() - currentGameState.getScore())
 
-        # reward: in new position, pacman gains more power by eating a power pellet
+        # reward: in new position, pacman gains more power by eating a pellet
         if len(newPowerList) < len(curPowerList):
           score += 15
 
-        # reward: in new position, pacman is closer to the power pellet
+        # reward: in new position, pacman is closer to the pellet
         if minNewPowerDistance < minCurPowerDistance:
-            score += 10
+          score += 10
 
-        """ # reward: in new position, ghosts are further away
+        # reward: in new position, ghosts are further away
         if minNewGhostDistance > minCurGhostDistance:
-          score += 10 """
-
-        # reward: in new position, pacman ate food
-        if len(newFoodList) < len(curFoodList):
           score += 50
 
         # reward: in new position, pacman is closer to food
@@ -159,14 +155,14 @@ class ReflexAgent(Agent):
           if minNewGhostDistance > minCurGhostDistance:
             score += 20
           else:
-            score -= 20
+            score -= 10
 
         # otherwise further distance is better
         else:
           if minNewGhostDistance < minCurGhostDistance:
-            score += 20 
+            score += 20
           else:
-            score -= 20
+            score -= 10
 
         return score
 
