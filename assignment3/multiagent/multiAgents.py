@@ -321,7 +321,45 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         legal moves.
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #util.raiseNotDefined()
+
+        # compute the probability of a move
+        # all ghosts choose uniformly at random from their legal moves
+        # so probability = 1/len(number of legal moves)
+        def prob(num_actions):
+          ret = 1./num_actions
+          return ret
+
+        def Expectimax(gameState, numMoves):
+          agentIndex = numMoves % gameState.getNumAgents()
+          currentDepth = numMoves/gameState.getNumAgents()
+          num_legal_actions = len(gameState.getLegalActions(agentIndex))
+
+          bestMove = None
+
+          if gameState.isWin() or gameState.isLose() or int(currentDepth) >= self.depth:
+            return bestMove, self.evaluationFunction(gameState)
+          
+          if agentIndex == 0: # equivalent to "if player(pos) == MAX"
+            value = -float("inf")
+          else: # equivalent to "if player(pos) == CHANCE"
+            value = 0
+
+          for move in gameState.getLegalActions(agentIndex):
+            nextState = gameState.generateSuccessor(agentIndex, move)
+            nextMove, nextVal = Expectimax(nextState, numMoves + 1)
+
+            if agentIndex == 0 and value < nextVal:
+              value, bestMove = nextVal, move
+
+            if agentIndex != 0:
+              value = value + prob(num_legal_actions) * nextVal
+
+          return bestMove, value
+
+        bestMove, value = Expectimax(gameState, 0)
+
+        return bestMove
 
 def betterEvaluationFunction(currentGameState):
     """
