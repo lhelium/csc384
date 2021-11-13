@@ -220,8 +220,40 @@ class MinimaxAgent(MultiAgentSearchAgent):
         Returns whether or not the game state is a losing state
         """
         "*** YOUR CODE HERE ***"
-        util.raiseNotDefined()
+        #util.raiseNotDefined()
 
+        # pacman is MAX so its corresponding agentIndex is 0
+        # ghosts are MIN so their corresponding agentIndex is 1
+        # pacman starts first
+        def DFMiniMax(gameState, numMoves):
+          agentIndex = numMoves % gameState.getNumAgents()
+          currentDepth = numMoves/gameState.getNumAgents()
+
+          bestMove = None
+
+          if gameState.isWin() or gameState.isLose() or int(currentDepth) >= self.depth:
+            return bestMove, self.evaluationFunction(gameState)
+          
+          if agentIndex == 0: # equivalent to "if player(pos) == MAX"
+            value = -float("inf")
+          else: # equivalent to "if player(pos) == MIN"
+            value = float("inf")
+
+          for move in gameState.getLegalActions(agentIndex):
+            nextState = gameState.generateSuccessor(agentIndex, move)
+            nextMove, nextVal = DFMiniMax(nextState, numMoves + 1)
+
+            if agentIndex == 0 and value < nextVal:
+              value, bestMove = nextVal, move
+            if agentIndex != 0 and value > nextVal:
+              value, bestMove = nextVal, move
+
+          return bestMove, value
+
+        bestMove, score = DFMiniMax(gameState, 0)
+
+        return bestMove
+        
 class AlphaBetaAgent(MultiAgentSearchAgent):
     """
     Your minimax agent with alpha-beta pruning (question 3)
