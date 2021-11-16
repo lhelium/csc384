@@ -114,11 +114,11 @@ class ReflexAgent(Agent):
 
         # reward: in new position, ghosts are further away
         if minNewGhostDistance > minCurGhostDistance:
-          score += 15 * 1./minNewGhostDistance
+          score += 1./minNewGhostDistance
 
         # reward: in new position, pacman is closer to food
         if minNewFoodDistance < minCurFoodDistance:
-          score += 10 * 1./minNewFoodDistance
+          score += 1./minNewFoodDistance
 
         return score
 
