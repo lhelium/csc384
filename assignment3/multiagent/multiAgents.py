@@ -109,6 +109,10 @@ class ReflexAgent(Agent):
         
         score = 0
 
+        # penalize for stopping
+        if action == Directions.STOP:
+          score -= 10
+
         # add score of new position relative to current position
         score += (successorGameState.getScore() - currentGameState.getScore())
 
