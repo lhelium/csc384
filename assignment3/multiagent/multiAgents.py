@@ -322,6 +322,12 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 
         return bestMove
 
+def find_average(a_list):
+  # return the average of the elements of a list
+  # return inf if the list is empty
+  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else float("inf")
+  return avg
+
 def betterEvaluationFunction(currentGameState):
     """
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
@@ -330,101 +336,80 @@ def betterEvaluationFunction(currentGameState):
     DESCRIPTION: <write something here so we know what you did>
     """
     "*** YOUR CODE HERE ***"
-    #util.raiseNotDefined()
-    # Useful information you can extract from a GameState (pacman.py)
-    successorGameState = currentGameState.generatePacmanSuccessor(action)
-    newPos = successorGameState.getPacmanPosition()
-    newFood = successorGameState.getFood()
-    newGhostStates = successorGameState.getGhostStates()
-    newScaredTimes = [ghostState.scaredTimer for ghostState in newGhostStates]
-    
-    "*** YOUR CODE HERE ***"
     # if successor state is a win state, return a really high number
     # if the successor state is a lose state, return a really low number
-    if successorGameState.isWin():
+    if currentGameState.isWin():
       score = float("inf")
       return score
-    elif successorGameState.isLose():
+    elif currentGameState.isLose():
       score = -float("inf")
       return score
-    
+
     # get current position
-    curPos = currentGameState.getPacmanPosition()
+    curPos = currentGameState.getPacmanPosition() 
 
     # distance to food in current position
     curFoodList = currentGameState.getFood().asList()
     curFoodDistance = [manhattanDistance(food, curPos) for food in curFoodList]
-    minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else float("inf")
-
-    # distance to food in new position
-    newFoodList = newFood.asList()
-    newFoodDistance = [manhattanDistance(food, newPos) for food in newFoodList]
-    minNewFoodDistance = min(newFoodDistance) if len(newFoodDistance) > 0 else float("inf")
+    #minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else float("inf")
 
     # distance from ghosts in current position
     curGhostStates = currentGameState.getGhostStates()
     curGhostPos = [ghost.getPosition() for ghost in curGhostStates]
     curGhostDistance = [manhattanDistance(ghost, curPos) for ghost in curGhostPos]
-    minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
+    #minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
 
-    # number of scared ghosts in current position
+    # distance to capsules in current position
+    curCapsulesList = currentGameState.getCapsules()
+    curCapsulesDistance = [manhattanDistance(capsule, curPos) for capsule in curCapsulesList]
+    #minCurCapsuleDistance = min(curCapsulesDistance) if len(curCapsulesDistance) > 0 else float("inf")
+
+    # scared times
     curScaredTimes = [ghostState.scaredTimer for ghostState in curGhostStates]
-    numCurScaredGhosts = sum(curScaredTimes)
-
-    # distance from ghosts in new position
-    newGhostPos = [ghost.getPosition() for ghost in newGhostStates]
-    newGhostDistance = [manhattanDistance(ghost, newPos) for ghost in newGhostPos]
-    minNewGhostDistance = min(newGhostDistance) if len(newGhostDistance) > 0 else float("inf")
-    
-    # number of scared ghosts in new position
-    numNewScaredGhosts = sum(newScaredTimes)
-
-    # distance from power pellets in current position
-    curPowerList = currentGameState.getCapsules()
-    curPowerDistance = [manhattanDistance(pellet, curPos) for pellet in curPowerList]
-    minCurPowerDistance = min(curPowerDistance) if len(curPowerDistance) > 0 else float("inf")
-    
-    # distance from power pellets in new position
-    newPowerList = successorGameState.getCapsules()
-    newPowerDistance = [manhattanDistance(pellet, newPos) for pellet in newPowerList]
-    minNewPowerDistance = min(newPowerDistance)  if len(newPowerDistance) > 0 else float("inf")
+    sumCurScaredTimes = sum(curScaredTimes)
 
     score = 0
 
     # add score of new position relative to current position
-    score += (successorGameState.getScore() - currentGameState.getScore())
+    score += currentGameState.getScore()
 
-    # reward: in new position, pacman gains more power by eating a pellet
-    if len(newPowerList) < len(curPowerList):
-      score += len(newPowerList) * 10
+    # avg distance to food (lower is better)
+    avgCurFoodDistance = find_average(curFoodDistance)
 
-    # reward: in new position, pacman is closer to the pellet
-    if minNewPowerDistance < minCurPowerDistance:
-      score += minNewPowerDistance * 10
+    # encourage ghost to eat food
+    # more food eaten (hence shorter list) is better
+    numFood = len(curFoodList)
+        
+    # avg distance to capsule (lower is better)
+    avgCurCapsuleDistance = find_average(curCapsulesDistance)
 
-    # reward: in new position, ghosts are further away
-    if minNewGhostDistance > minCurGhostDistance:
-      score += minNewGhostDistance * 10
+    # encourage ghost to eat capsules if number of food > 1
+    numCapsules = len(curCapsulesList)
 
-    # reward: in new position, pacman is closer to food
-    if minNewFoodDistance < minCurFoodDistance:
-      score += minNewFoodDistance * 10
-
-    # if, in new position, less ghosts are scared, farther distance to ghosts is better
-    if numNewScaredGhosts < numCurScaredGhosts:
-      if minNewGhostDistance > minCurGhostDistance:
-        score += minNewGhostDistance * 10
-      else:
-        score -= minNewGhostDistance
-
-    # otherwise closer distance is better
+    # avg distance to ghosts
+    avgCurGhostDistance = find_average(curGhostDistance)
+    
+    ghostScore = 0
+    # if ghosts are scared, you can move closer to ghosts
+    if sumCurScaredTimes > 0:
+      ghostScore = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
+    # otherwise, stay far away from ghosts
     else:
-      if minNewGhostDistance < minCurGhostDistance:
-        score += minNewGhostDistance * 10
-      else:
-        score -= minNewGhostDistance
+      ghostScore = max(curGhostDistance)  if len(curGhostDistance) > 0 else -float("inf")
+
+    # calculate scores
+
+    # if only one food left, encourage pacman to eat the food to end the game
+    if numFood == 1:
+      foodScore = 10 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+    else:
+      foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+
+    capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 0
+
+    ghostScore = 1./ghostScore if ghostScore != 0 else 0
+    score += foodScore + capsuleScore + ghostScore
 
     return score
-
 # Abbreviation
 better = betterEvaluationFunction
