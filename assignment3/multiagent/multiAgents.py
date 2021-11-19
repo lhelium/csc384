@@ -77,10 +77,10 @@ class ReflexAgent(Agent):
         # if successor state is a win state, return a really high number
         # if the successor state is a lose state, return a really low number
         if successorGameState.isWin():
-          score = float("inf")
+          score = 999999999#float("inf")
           return score
         elif successorGameState.isLose():
-          score = -float("inf")
+          score = -999999999#float("inf")
           return score
         
         # get current position
@@ -89,23 +89,23 @@ class ReflexAgent(Agent):
         # distance to food in current position
         curFoodList = currentGameState.getFood().asList()
         curFoodDistance = [manhattanDistance(food, curPos) for food in curFoodList]
-        minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else float("inf")
+        minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else 999999999#float("inf")
 
         # distance to food in new position
         newFoodList = newFood.asList()
         newFoodDistance = [manhattanDistance(food, newPos) for food in newFoodList]
-        minNewFoodDistance = min(newFoodDistance) if len(newFoodDistance) > 0 else float("inf")
+        minNewFoodDistance = min(newFoodDistance) if len(newFoodDistance) > 0 else 999999999#float("inf")
 
         # distance from ghosts in current position
         curGhostStates = currentGameState.getGhostStates()
         curGhostPos = [ghost.getPosition() for ghost in curGhostStates]
         curGhostDistance = [manhattanDistance(ghost, curPos) for ghost in curGhostPos]
-        minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
+        minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else 999999999#float("inf")
 
         # distance from ghosts in new position
         newGhostPos = [ghost.getPosition() for ghost in newGhostStates]
         newGhostDistance = [manhattanDistance(ghost, newPos) for ghost in newGhostPos]
-        minNewGhostDistance = min(newGhostDistance) if len(newGhostDistance) > 0 else float("inf")
+        minNewGhostDistance = min(newGhostDistance) if len(newGhostDistance) > 0 else 999999999#float("inf")
         
         score = 0
 
@@ -194,15 +194,15 @@ class MinimaxAgent(MultiAgentSearchAgent):
           agentIndex = numMoves % gameState.getNumAgents()
           currentDepth = numMoves/gameState.getNumAgents()
 
-          bestMove = None
+          bestMove = Directions.STOP
 
           if gameState.isWin() or gameState.isLose() or int(currentDepth) >= self.depth:
             return bestMove, self.evaluationFunction(gameState)
           
           if agentIndex == 0: # equivalent to "if player(pos) == MAX"
-            value = -float("inf")
+            value = -999999999#float("inf")
           else: # equivalent to "if player(pos) == MIN"
-            value = float("inf")
+            value = 999999999#float("inf")
 
           for move in gameState.getLegalActions(agentIndex):
             nextState = gameState.generateSuccessor(agentIndex, move)
@@ -235,15 +235,15 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           agentIndex = numMoves % gameState.getNumAgents()
           currentDepth = numMoves/gameState.getNumAgents()
 
-          bestMove = None
+          bestMove = Directions.STOP
 
           if gameState.isWin() or gameState.isLose() or int(currentDepth) >= self.depth:
             return bestMove, self.evaluationFunction(gameState)
           
           if agentIndex == 0: # equivalent to "if player(pos) == MAX"
-            value = -float("inf")
+            value = -999999999#float("inf")
           else: # equivalent to "if player(pos) == MIN"
-            value = float("inf")
+            value = 999999999#float("inf")
 
           for move in gameState.getLegalActions(agentIndex):
             nextState = gameState.generateSuccessor(agentIndex, move)
@@ -269,7 +269,8 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
 
           return bestMove, value
 
-        bestMove, value = AlphaBeta(gameState, -float("inf"), float("inf"), 0)
+        #bestMove, value = AlphaBeta(gameState, -float("inf"), float("inf"), 0)
+        bestMove, value = AlphaBeta(gameState, -999999999, 999999999, 0)
 
         return bestMove
 
@@ -300,13 +301,13 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
           currentDepth = numMoves/gameState.getNumAgents()
           num_legal_actions = len(gameState.getLegalActions(agentIndex))
 
-          bestMove = None
+          bestMove = Directions.STOP
 
           if gameState.isWin() or gameState.isLose() or int(currentDepth) >= self.depth:
             return bestMove, self.evaluationFunction(gameState)
           
           if agentIndex == 0: # equivalent to "if player(pos) == MAX"
-            value = -float("inf")
+            value = -999999999#float("inf")
           else: # equivalent to "if player(pos) == CHANCE"
             value = 0
 
@@ -329,7 +330,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 def find_average(a_list):
   # return the average of the elements of a list
   # return inf if the list is empty
-  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else float("inf")
+  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else 999999999#float("inf")
   return avg
 
 def betterEvaluationFunction(currentGameState):
@@ -337,16 +338,16 @@ def betterEvaluationFunction(currentGameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: <write something here so we know what you did>
+    DESCRIPTION: Read the comments in my code (I think I documented it pretty well)
     """
     "*** YOUR CODE HERE ***"
     # if successor state is a win state, return a really high number
     # if the successor state is a lose state, return a really low number
     if currentGameState.isWin():
-      score = float("inf")
+      score = 999999999#float("inf")
       return score
     elif currentGameState.isLose():
-      score = -float("inf")
+      score = -999999999#float("inf")
       return score
 
     # get current position
@@ -374,9 +375,6 @@ def betterEvaluationFunction(currentGameState):
 
     score = 0
 
-    # add score of new position relative to current position
-    score += currentGameState.getScore()
-
     # avg distance to food (lower is better)
     avgCurFoodDistance = find_average(curFoodDistance)
 
@@ -396,10 +394,10 @@ def betterEvaluationFunction(currentGameState):
     ghostScore = 0
     # if ghosts are scared, you can move closer to ghosts
     if sumCurScaredTimes > 0:
-      ghostScore = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
+      ghostScore = min(curGhostDistance) if len(curGhostDistance) > 0 else 999999999#float("inf")
     # otherwise, stay far away from ghosts
     else:
-      ghostScore = max(curGhostDistance)  if len(curGhostDistance) > 0 else -float("inf")
+      ghostScore = max(curGhostDistance)  if len(curGhostDistance) > 0 else -999999999#float("inf")
 
     # calculate scores
 
@@ -412,8 +410,10 @@ def betterEvaluationFunction(currentGameState):
     capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 0
 
     ghostScore = 1./ghostScore if ghostScore != 0 else 0
-    score += foodScore + capsuleScore + ghostScore
+    
+    score += currentGameState.getScore() + foodScore + capsuleScore + ghostScore
 
     return score
+    
 # Abbreviation
 better = betterEvaluationFunction
