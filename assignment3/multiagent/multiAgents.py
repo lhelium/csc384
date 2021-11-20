@@ -346,8 +346,9 @@ def betterEvaluationFunction(currentGameState):
     DESCRIPTION: Prioritize food > ghosts > capsules
     For food and capsules, use average distances since that's the best representation of the current state of the game
     For ghosts, you want to be more specific with where they are located, so use min distance
-    Invert the distances so that lower distances correspond to higher scores
-    Add 1 to the denominator of each reciprocal to promote numerical stability and prevent divide-by-zero errors
+    To encourage Pacman to eat food/capsules, use a count of the number of food/capsule pellets on the current gameboard
+    Invert the values so that lower values correspond to higher scores
+    Add 1 to the denominator of each reciprocal to promote numerical stability by preventing divide-by-zero errors
     """
     "*** YOUR CODE HERE ***"
     # if successor state is a win state, return a really high number
@@ -426,10 +427,11 @@ def betterEvaluationFunction(currentGameState):
 
     if notScaredGhostScore == BIG_NUMBER:
       notScaredGhostScore = 0
+    notScaredGhostScore *= -1
 
     # calculate scores
     # if only one food left, encourage pacman to eat the food to end the game
-    foodFactor = 6.0
+    foodFactor = 7.5
     if numFood == 1:
       foodFactor = 15.0
 
@@ -437,7 +439,7 @@ def betterEvaluationFunction(currentGameState):
 
     capsuleScore = 1./(1 + minCurCapsuleDistance) + 1./(1 + numCapsules)
 
-    ghostScore = 5.0 * 1./scaredGhostScore - 4.0 * notScaredGhostScore
+    ghostScore = 6.5 * 1./scaredGhostScore + 4.0 * notScaredGhostScore
     
     #score += foodFactor * foodScore + 4.0 * capsuleScore + 5.0 * ghostScore
     score += foodFactor * foodScore + 4.0 * capsuleScore + ghostScore
