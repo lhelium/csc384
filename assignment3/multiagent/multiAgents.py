@@ -344,6 +344,8 @@ def betterEvaluationFunction(currentGameState):
     evaluation function (question 5).
 
     DESCRIPTION: Prioritize food > ghosts > capsules
+    For food and capsules, use average distances since that's the best representation of the current state of the game
+    For ghosts, you want to be more specific with where they are located, so use min distance
     Invert the distances so that lower distances correspond to higher scores
     Add 1 to the denominator of each reciprocal to promote numerical stability and prevent divide-by-zero errors
     """
@@ -383,22 +385,22 @@ def betterEvaluationFunction(currentGameState):
     score += currentGameState.getScore()
 
     # avg distance to food (lower is better)
-    minCurFoodDistance = find_min(curFoodDistance)
+    minCurFoodDistance = find_average(curFoodDistance)
 
     # encourage ghost to eat food
     # more food eaten (hence shorter list) is better
     numFood = len(curFoodList)
         
     # avg distance to capsule (lower is better)
-    minCurCapsuleDistance = find_min(curCapsulesDistance)
+    minCurCapsuleDistance = find_average(curCapsulesDistance)
 
     # encourage ghost to eat capsules if number of food > 1
     numCapsules = len(curCapsulesList)
 
     """ # avg distance to ghosts
-    minCurGhostDistance = find_min(curGhostDistance)
+    minCurGhostDistance = find_average(curGhostDistance)
     
-    ghostScore = -find_min(curGhostDistance)
+    ghostScore = -find_average(curGhostDistance)
 
     # find the ghost which is closest to pacman
     # if the closest ghost is scared, then we can get closer to the ghost
@@ -409,8 +411,8 @@ def betterEvaluationFunction(currentGameState):
     #ghostScore *= -1 if closestGhostIsScared > 0 else 1
     # if ghosts are scared, you can move closer to ghosts
     if sumCurScaredTimes > 0:
-      ghostScore *= -1 """
-
+      ghostScore *= -1"""
+    
     scaredGhostScore = BIG_NUMBER
     notScaredGhostScore = BIG_NUMBER
 
