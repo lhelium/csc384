@@ -333,13 +333,11 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 def find_average(a_list):
   # return the average of the elements of a list
   # return inf if the list is empty
-  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else BIG_NUMBER#float("inf")
+  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else 1#float("inf")
   return avg
 
 def find_min(a_list):
-  mini = 1
-  if len(a_list) > 0:
-    mini = min(a_list)
+  mini = min(a_list) if len(a_list) != 0 else 1
   return mini
 
 def betterEvaluationFunction(currentGameState):
