@@ -331,9 +331,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
         return bestMove
 
 def find_average(a_list):
-  # return the average of the elements of a list
-  # return inf if the list is empty
-  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else 1#float("inf")
+  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else 1
   return avg
 
 def find_min(a_list):
@@ -433,14 +431,13 @@ def betterEvaluationFunction(currentGameState):
     if numFood == 1:
       foodFactor = 1000 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
 
-    foodScore = 1./avgCurFoodDistance #+ 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 1
-    foodScore *= foodFactor
+    foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 1
 
-    capsuleScore = 3.0 * 1./avgCurCapsuleDistance #+ 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 1
+    capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 1
 
     ghostScore = 6.0 * 1./scaredGhostScore - 4.0 * notScaredGhostScore #if ghostScore != 0 else 1
     
-    score += foodScore + capsuleScore + ghostScore
+    score += foodFactor * foodScore + 3.0 * capsuleScore + ghostScore
 
     return score
     
