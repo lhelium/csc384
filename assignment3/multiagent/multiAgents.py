@@ -18,6 +18,9 @@ import random, util
 
 from game import Agent
 
+BIG_NUMBER = 999999999
+SMALL_NUMBER = -999999999
+
 class ReflexAgent(Agent):
     """
     A reflex agent chooses an action at each choice point by examining
@@ -77,7 +80,7 @@ class ReflexAgent(Agent):
         # if successor state is a win state, return a really high number
         # if the successor state is a lose state, return a really low number
         if successorGameState.isWin():
-          score = 999999999#float("inf")
+          score = BIG_NUMBER#float("inf")
           return score
         elif successorGameState.isLose():
           score = -999999999#float("inf")
@@ -89,23 +92,23 @@ class ReflexAgent(Agent):
         # distance to food in current position
         curFoodList = currentGameState.getFood().asList()
         curFoodDistance = [manhattanDistance(food, curPos) for food in curFoodList]
-        minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else 999999999#float("inf")
+        minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else BIG_NUMBER#float("inf")
 
         # distance to food in new position
         newFoodList = newFood.asList()
         newFoodDistance = [manhattanDistance(food, newPos) for food in newFoodList]
-        minNewFoodDistance = min(newFoodDistance) if len(newFoodDistance) > 0 else 999999999#float("inf")
+        minNewFoodDistance = min(newFoodDistance) if len(newFoodDistance) > 0 else BIG_NUMBER#float("inf")
 
         # distance from ghosts in current position
         curGhostStates = currentGameState.getGhostStates()
         curGhostPos = [ghost.getPosition() for ghost in curGhostStates]
         curGhostDistance = [manhattanDistance(ghost, curPos) for ghost in curGhostPos]
-        minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else 999999999#float("inf")
+        minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else BIG_NUMBER#float("inf")
 
         # distance from ghosts in new position
         newGhostPos = [ghost.getPosition() for ghost in newGhostStates]
         newGhostDistance = [manhattanDistance(ghost, newPos) for ghost in newGhostPos]
-        minNewGhostDistance = min(newGhostDistance) if len(newGhostDistance) > 0 else 999999999#float("inf")
+        minNewGhostDistance = min(newGhostDistance) if len(newGhostDistance) > 0 else BIG_NUMBER#float("inf")
         
         score = 0
 
@@ -200,9 +203,9 @@ class MinimaxAgent(MultiAgentSearchAgent):
             return bestMove, self.evaluationFunction(gameState)
           
           if agentIndex == 0: # equivalent to "if player(pos) == MAX"
-            value = -999999999#float("inf")
+            value = SMALL_NUMBER#float("inf")
           else: # equivalent to "if player(pos) == MIN"
-            value = 999999999#float("inf")
+            value = BIG_NUMBER#float("inf")
 
           for move in gameState.getLegalActions(agentIndex):
             nextState = gameState.generateSuccessor(agentIndex, move)
@@ -241,9 +244,9 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
             return bestMove, self.evaluationFunction(gameState)
           
           if agentIndex == 0: # equivalent to "if player(pos) == MAX"
-            value = -999999999#float("inf")
+            value = SMALL_NUMBER#float("inf")
           else: # equivalent to "if player(pos) == MIN"
-            value = 999999999#float("inf")
+            value = BIG_NUMBER#float("inf")
 
           for move in gameState.getLegalActions(agentIndex):
             nextState = gameState.generateSuccessor(agentIndex, move)
@@ -270,7 +273,7 @@ class AlphaBetaAgent(MultiAgentSearchAgent):
           return bestMove, value
 
         #bestMove, value = AlphaBeta(gameState, -float("inf"), float("inf"), 0)
-        bestMove, value = AlphaBeta(gameState, -999999999, 999999999, 0)
+        bestMove, value = AlphaBeta(gameState, SMALL_NUMBER, BIG_NUMBER, 0)
 
         return bestMove
 
@@ -307,7 +310,7 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
             return bestMove, self.evaluationFunction(gameState)
           
           if agentIndex == 0: # equivalent to "if player(pos) == MAX"
-            value = -999999999#float("inf")
+            value = SMALL_NUMBER#float("inf")
           else: # equivalent to "if player(pos) == CHANCE"
             value = 0
 
@@ -330,8 +333,14 @@ class ExpectimaxAgent(MultiAgentSearchAgent):
 def find_average(a_list):
   # return the average of the elements of a list
   # return inf if the list is empty
-  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else 999999999#float("inf")
+  avg = sum(a_list)/len(a_list) if len(a_list) > 0 else BIG_NUMBER#float("inf")
   return avg
+
+def find_min(a_list):
+  mini = 1
+  if len(a_list) > 0:
+    mini = min(a_list)
+  return mini
 
 def betterEvaluationFunction(currentGameState):
     """
@@ -344,10 +353,10 @@ def betterEvaluationFunction(currentGameState):
     # if successor state is a win state, return a really high number
     # if the successor state is a lose state, return a really low number
     if currentGameState.isWin():
-      score = 999999999#float("inf")
+      score = BIG_NUMBER
       return score
     elif currentGameState.isLose():
-      score = -999999999#float("inf")
+      score = SMALL_NUMBER
       return score
 
     # get current position
@@ -375,43 +384,44 @@ def betterEvaluationFunction(currentGameState):
 
     score = 0
 
+    # add score of new position relative to current position
+    score += currentGameState.getScore()
+
     # avg distance to food (lower is better)
-    avgCurFoodDistance = find_average(curFoodDistance)
+    avgCurFoodDistance = find_min(curFoodDistance)
 
     # encourage ghost to eat food
     # more food eaten (hence shorter list) is better
     numFood = len(curFoodList)
         
     # avg distance to capsule (lower is better)
-    avgCurCapsuleDistance = find_average(curCapsulesDistance)
+    avgCurCapsuleDistance = find_min(curCapsulesDistance)
 
     # encourage ghost to eat capsules if number of food > 1
     numCapsules = len(curCapsulesList)
 
     # avg distance to ghosts
-    avgCurGhostDistance = find_average(curGhostDistance)
+    avgCurGhostDistance = find_min(curGhostDistance)
     
-    ghostScore = 0
+    ghostScore = -find_min(curGhostDistance)
     # if ghosts are scared, you can move closer to ghosts
     if sumCurScaredTimes > 0:
-      ghostScore = min(curGhostDistance) if len(curGhostDistance) > 0 else 999999999#float("inf")
-    # otherwise, stay far away from ghosts
-    else:
-      ghostScore = max(curGhostDistance)  if len(curGhostDistance) > 0 else -999999999#float("inf")
+      ghostScore *= -1
 
     # calculate scores
 
     # if only one food left, encourage pacman to eat the food to end the game
+    foodFactor = 1
     if numFood == 1:
-      foodScore = 10 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
-    else:
-      foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+      foodFactor = 1000 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+
+    foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+    foodScore *= foodFactor
 
     capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 0
 
     ghostScore = 1./ghostScore if ghostScore != 0 else 0
-    
-    score += currentGameState.getScore() + foodScore + capsuleScore + ghostScore
+    score += foodScore + capsuleScore + ghostScore
 
     return score
     
