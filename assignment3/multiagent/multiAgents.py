@@ -402,23 +402,30 @@ def betterEvaluationFunction(currentGameState):
     avgCurGhostDistance = find_min(curGhostDistance)
     
     ghostScore = -find_min(curGhostDistance)
-    # if ghosts are scared, you can move closer to ghosts
+
+    # find the ghost which is closest to pacman
+    # if the closest ghost is scared, then we can get closer to the ghost
+    # otherwise, stay far away
+    closestGhost = curGhostDistance.index(ghostScore * -1)
+    closestGhostIsScared = curScaredTimes[closestGhost]
+
+    ghostScore *= -1 if closestGhostIsScared > 0 else 1
+    """ # if ghosts are scared, you can move closer to ghosts
     if sumCurScaredTimes > 0:
-      ghostScore *= -1
+      ghostScore *= -1 """
 
     # calculate scores
-
     # if only one food left, encourage pacman to eat the food to end the game
     foodFactor = 1
     if numFood == 1:
       foodFactor = 1000 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
 
-    foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+    foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 1
     foodScore *= foodFactor
 
-    capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 0
+    capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 1
 
-    ghostScore = 1./ghostScore if ghostScore != 0 else 0
+    ghostScore = 1./ghostScore if ghostScore != 0 else 1
     score += foodScore + capsuleScore + ghostScore
 
     return score
