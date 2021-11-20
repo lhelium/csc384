@@ -343,7 +343,9 @@ def betterEvaluationFunction(currentGameState):
     Your extreme ghost-hunting, pellet-nabbing, food-gobbling, unstoppable
     evaluation function (question 5).
 
-    DESCRIPTION: Read the comments in my code (I think I documented it pretty well)
+    DESCRIPTION: Prioritize food > ghosts > capsules
+    Invert the distances so that lower distances correspond to higher scores
+    Add 1 to the denominator of each reciprocal to promote numerical stability and prevent divide-by-zero errors
     """
     "*** YOUR CODE HERE ***"
     # if successor state is a win state, return a really high number
@@ -361,18 +363,15 @@ def betterEvaluationFunction(currentGameState):
     # distance to food in current position
     curFoodList = currentGameState.getFood().asList()
     curFoodDistance = [manhattanDistance(food, curPos) for food in curFoodList]
-    #minCurFoodDistance = min(curFoodDistance) if len(curFoodDistance) > 0 else float("inf")
 
     # distance from ghosts in current position
     curGhostStates = currentGameState.getGhostStates()
     curGhostPos = [ghost.getPosition() for ghost in curGhostStates]
     curGhostDistance = [manhattanDistance(ghost, curPos) for ghost in curGhostPos]
-    #minCurGhostDistance = min(curGhostDistance) if len(curGhostDistance) > 0 else float("inf")
 
     # distance to capsules in current position
     curCapsulesList = currentGameState.getCapsules()
     curCapsulesDistance = [manhattanDistance(capsule, curPos) for capsule in curCapsulesList]
-    #minCurCapsuleDistance = min(curCapsulesDistance) if len(curCapsulesDistance) > 0 else float("inf")
 
     # scared times
     curScaredTimes = [ghostState.scaredTimer for ghostState in curGhostStates]
@@ -384,20 +383,20 @@ def betterEvaluationFunction(currentGameState):
     score += currentGameState.getScore()
 
     # avg distance to food (lower is better)
-    avgCurFoodDistance = find_min(curFoodDistance)
+    minCurFoodDistance = find_min(curFoodDistance)
 
     # encourage ghost to eat food
     # more food eaten (hence shorter list) is better
     numFood = len(curFoodList)
         
     # avg distance to capsule (lower is better)
-    avgCurCapsuleDistance = find_min(curCapsulesDistance)
+    minCurCapsuleDistance = find_min(curCapsulesDistance)
 
     # encourage ghost to eat capsules if number of food > 1
     numCapsules = len(curCapsulesList)
 
-    # avg distance to ghosts
-    avgCurGhostDistance = find_min(curGhostDistance)
+    """ # avg distance to ghosts
+    minCurGhostDistance = find_min(curGhostDistance)
     
     ghostScore = -find_min(curGhostDistance)
 
@@ -407,7 +406,12 @@ def betterEvaluationFunction(currentGameState):
     closestGhost = curGhostDistance.index(ghostScore * -1)
     closestGhostIsScared = curScaredTimes[closestGhost]
 
-    """ scaredGhostScore = BIG_NUMBER
+    #ghostScore *= -1 if closestGhostIsScared > 0 else 1
+    # if ghosts are scared, you can move closer to ghosts
+    if sumCurScaredTimes > 0:
+      ghostScore *= -1 """
+
+    scaredGhostScore = BIG_NUMBER
     notScaredGhostScore = BIG_NUMBER
 
     for ghost in curGhostStates:
@@ -419,26 +423,22 @@ def betterEvaluationFunction(currentGameState):
         notScaredGhostScore = min(ghostDist, notScaredGhostScore)
 
     if notScaredGhostScore == BIG_NUMBER:
-      notScaredGhostScore = 0 """
-
-    #ghostScore *= -1 if closestGhostIsScared > 0 else 1
-    # if ghosts are scared, you can move closer to ghosts
-    if sumCurScaredTimes > 0:
-      ghostScore *= -1
+      notScaredGhostScore = 0
 
     # calculate scores
     # if only one food left, encourage pacman to eat the food to end the game
-    foodFactor = 10.0
+    foodFactor = 6.0
     if numFood == 1:
-      foodFactor = 1000.0 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
+      foodFactor = 15.0
 
-    foodScore = 1./(1 + avgCurFoodDistance) + 1./(1 + numFood) #if avgCurFoodDistance != 0 and numFood != 0 else 1
+    foodScore = 1./(1 + minCurFoodDistance) + 1./(1 + numFood)
 
-    capsuleScore = 1./(1 + avgCurCapsuleDistance) + 1./(1 + numCapsules) #if avgCurCapsuleDistance != 0 and numCapsules != 0 else 1
+    capsuleScore = 1./(1 + minCurCapsuleDistance) + 1./(1 + numCapsules)
 
-    #ghostScore = 6.0 * 1./scaredGhostScore - 4.0 * notScaredGhostScore #if ghostScore != 0 else 1
+    ghostScore = 5.0 * 1./scaredGhostScore - 4.0 * notScaredGhostScore
     
-    score += foodFactor * foodScore + 4.0 * capsuleScore + 5.0 * ghostScore
+    #score += foodFactor * foodScore + 4.0 * capsuleScore + 5.0 * ghostScore
+    score += foodFactor * foodScore + 4.0 * capsuleScore + ghostScore
 
     return score
     
