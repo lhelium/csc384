@@ -386,14 +386,14 @@ def betterEvaluationFunction(currentGameState):
     score += currentGameState.getScore()
 
     # avg distance to food (lower is better)
-    minCurFoodDistance = find_average(curFoodDistance)
+    avgCurFoodDistance = find_average(curFoodDistance)
 
     # encourage ghost to eat food
     # more food eaten (hence shorter list) is better
     numFood = len(curFoodList)
         
     # avg distance to capsule (lower is better)
-    minCurCapsuleDistance = find_average(curCapsulesDistance)
+    avgCurCapsuleDistance = find_average(curCapsulesDistance)
 
     # encourage ghost to eat capsules if number of food > 1
     numCapsules = len(curCapsulesList)
@@ -414,6 +414,9 @@ def betterEvaluationFunction(currentGameState):
     if sumCurScaredTimes > 0:
       ghostScore *= -1"""
     
+    # if ghosts are scared, we can move towards them. so min distance is better
+    # if ghosts are not scared, we want to stay away from them (especially the closest one)
+    
     scaredGhostScore = BIG_NUMBER
     notScaredGhostScore = BIG_NUMBER
 
@@ -427,17 +430,19 @@ def betterEvaluationFunction(currentGameState):
 
     if notScaredGhostScore == BIG_NUMBER:
       notScaredGhostScore = 0
+
+    # penalize unscared ghosts by subtracting their distance from the score
     notScaredGhostScore *= -1
 
     # calculate scores
     # if only one food left, encourage pacman to eat the food to end the game
     foodFactor = 7.5
     if numFood == 1:
-      foodFactor = 15.0
+      foodFactor = 20.0
 
-    foodScore = 1./(1 + minCurFoodDistance) + 1./(1 + numFood)
+    foodScore = 1./(1 + avgCurFoodDistance) + 1./(1 + numFood)
 
-    capsuleScore = 1./(1 + minCurCapsuleDistance) + 1./(1 + numCapsules)
+    capsuleScore = 1./(1 + avgCurCapsuleDistance) + 1./(1 + numCapsules)
 
     ghostScore = 6.5 * 1./scaredGhostScore + 4.0 * notScaredGhostScore
     
