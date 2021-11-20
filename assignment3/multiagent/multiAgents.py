@@ -409,6 +409,7 @@ def betterEvaluationFunction(currentGameState):
 
     scaredGhostScore = BIG_NUMBER
     notScaredGhostScore = BIG_NUMBER
+
     for ghost in curGhostStates:
       ghostDist = manhattanDistance(ghost.getPosition(), curPos)
 
@@ -431,9 +432,9 @@ def betterEvaluationFunction(currentGameState):
     if numFood == 1:
       foodFactor = 1000 #1./avgCurFoodDistance + 10000 * 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 0
 
-    foodScore = 1./avgCurFoodDistance + 1./numFood if avgCurFoodDistance != 0 and numFood != 0 else 1
+    foodScore = 1./(1+avgCurFoodDistance) + 1./(1+numFood) #if avgCurFoodDistance != 0 and numFood != 0 else 1
 
-    capsuleScore = 1./avgCurCapsuleDistance + 1./numCapsules if avgCurCapsuleDistance != 0 and numCapsules != 0 else 1
+    capsuleScore = 1./(1+avgCurCapsuleDistance) + 1./(1+numCapsules) #if avgCurCapsuleDistance != 0 and numCapsules != 0 else 1
 
     ghostScore = 6.0 * 1./scaredGhostScore - 4.0 * notScaredGhostScore #if ghostScore != 0 else 1
     
