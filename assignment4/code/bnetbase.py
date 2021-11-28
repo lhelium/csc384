@@ -296,15 +296,82 @@ class BN:
         return list(self.Variables)
 
 def multiply_factors(Factors):
-    '''return a new factor that is the product of the factors in Fators'''
-     #IMPLEMENT
+    '''return a new factor that is the product of the factors in Factors'''
+    #IMPLEMENT
 
+    # create the new factor's name as "factor[1].name * factor[2].name * ..."
+    new_name = " * ".join([factor.name for factor in Factors])
+    new_scope = set()
+
+    for factor in Factors:
+        factor_scope = set(factor.get_scope())
+        new_scope.update(factor_scope)
+    
+    new_factor = Factor(new_name, new_scope)
+
+    def multiply_factors_helper(new_factor_vars, factors, new_factor):
+        # recursively explore all value assignments to the variables comprising new_factor
+        
+        # base case: we have an assignment for all variables in the scope of new_factor (i.e.: new_factor_vars == None)
+        # calculate the product of the variables at their current assignment
+        # assign the product we calculated to new_factor at this assignment of the vars
+
+        # recursive case: get the values for each variable in the scope of new_factor
+        # assign the variable to one of the values in its domain
+        # move on to the next variable to do the same thing
+        
+        if len(new_factor_vars) == 0:
+            product = 1
+
+            for factor in factors: 
+                product *= factor.get_value_at_current_assignments()
+            
+            new_factor.add_value_at_current_assignment(product)
+            return
+        else:
+            current_var = new_factor_vars[0]
+            
+            for value in current_var:
+                current_var.set_assignment(value)
+                multiply_factors_helper(new_factor_vars[1:], factors, new_factor)
+    
+    multiply_factors_helper(common_vars, Factors, new_factor)
+    return new_factor
+        
+        
 def restrict_factor(f, var, value):
     '''f is a factor, var is a Variable, and value is a value from var.domain.
     Return a new factor that is the restriction of f by this var = value.
     Don't change f! If f has only one variable its restriction yields a
     constant factor'''
     #IMPLEMENT
+
+    # new factor name: restrict f(A) to a
+    new_name = "restrict " + f.name + "(" + str(var) + ")" " to " + str(value)
+
+    # scope of new factor = scope of f - var
+    new_scope = set(f.get_scope())
+    new_scope.discard(var) # to avoid removing something that doesn't exist
+
+    new_factor = Factor(new_name, new_scope)
+
+    def restrict_factor_helper(factor_scope, factor, new_factor, restricted_var, restricted_value):
+
+        if len(factor_scope) == 0:
+            new_factor.add_value_at_current_assignment(factor.get_value_at_current_assignments())
+        else:
+            current_var = factor_scope[0]
+            
+            if current_var == restricted_var:
+                current_var.set_assignment(value)
+                restrict_factor_helper(factor_scope[1:], factor, new_factor, restricted_var, restricted_value)
+            else:
+                for value in current_var:
+                    current_var.set_assignment(value)
+                    restrict_factor_helper(factor_scope[1:], factor, new_factor, restricted_var, restricted_value)
+    
+    restrict_factor_helper(f.get_scope(), f, new_factor, var, val)
+    return new_factor
 
 def sum_out_variable(f, var):
     '''return a new factor that is the product of the factors in Factors
