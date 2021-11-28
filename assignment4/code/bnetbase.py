@@ -307,6 +307,9 @@ def multiply_factors(Factors):
         factor_scope = set(factor.get_scope())
         new_scope.update(factor_scope)
     
+    # convert new_scope into a list so we can iterate over it
+    new_scope = list(new_scope)
+    
     new_factor = Factor(new_name, new_scope)
 
     def multiply_factors_helper(new_factor_vars, factors, new_factor):
@@ -331,11 +334,11 @@ def multiply_factors(Factors):
         else:
             current_var = new_factor_vars[0]
             
-            for value in current_var:
+            for value in current_var.domain():
                 current_var.set_assignment(value)
                 multiply_factors_helper(new_factor_vars[1:], factors, new_factor)
     
-    multiply_factors_helper(common_vars, Factors, new_factor)
+    multiply_factors_helper(new_scope, Factors, new_factor)
     return new_factor
         
         
@@ -356,32 +359,94 @@ def restrict_factor(f, var, value):
     new_factor = Factor(new_name, new_scope)
 
     def restrict_factor_helper(factor_scope, factor, new_factor, restricted_var, restricted_value):
+        # recursively explore all value assignments to the variables comprising new_factor
+        
+        # base case: we have an assignment for all variables in the scope of new_factor (i.e.: new_factor_vars == None)
+        # assign to new_factor the valuoe of the factor at this assignment
+
+        # recursive case: get the values for each variable in the scope of new_factor
+        # if this is the variable that we're restricting, set it to the restricted value
+        # if not, try every value in the domain
 
         if len(factor_scope) == 0:
             new_factor.add_value_at_current_assignment(factor.get_value_at_current_assignments())
+            return
         else:
             current_var = factor_scope[0]
             
             if current_var == restricted_var:
-                current_var.set_assignment(value)
+                current_var.set_assignment(restricted_value)
                 restrict_factor_helper(factor_scope[1:], factor, new_factor, restricted_var, restricted_value)
             else:
-                for value in current_var:
+                for value in factor_scope[0].domain():
                     current_var.set_assignment(value)
                     restrict_factor_helper(factor_scope[1:], factor, new_factor, restricted_var, restricted_value)
     
-    restrict_factor_helper(f.get_scope(), f, new_factor, var, val)
+    restrict_factor_helper(f.get_scope(), f, new_factor, var, value)
     return new_factor
 
 def sum_out_variable(f, var):
     '''return a new factor that is the product of the factors in Factors
-       followed by the suming out of Var'''
+       followed by the summing out of Var'''
     #IMPLEMENT
+    # ****
+
+    new_name = "sum " + f.name + " over variable " + var.name
+
+    # scope of new factor = scope of f - variable that you're summing out
+    new_scope = list(f.get_scope())
+    new_scope.remove(var) # to avoid removing something that doesn't exist
+    
+    # convert new_scope into a list so we can iterate over it
+    #new_scope = list(new_scope)
+
+    new_factor = Factor(new_name, new_scope)
+
+    def sum_out_helper(new_scope, factor, new_factor, var):
+        # recursively explore all value assignments to the variables comprising new_factor
+        
+        # base case: we have an assignment for all variables in the scope of factor
+        # for each value in the domain of the var we want to sum over, set the var to that value so that we can retrieve the factor's assignment
+        # add the factor's value at this assignment to a running total, and assign the running total to new_factor's value
+
+        # recursive case: get the values for each variable in the scope of new_factor
+        # if this is the variable that we're restricting, set it to the restricted value
+        # if not, try every value in the domain
+
+        if len(new_scope) == 0:
+            sum_of_vals = 0
+
+            for value in var.domain():
+                var.set_assignment(value)
+                sum_of_vals += factor.get_value_at_current_assignments()
+            
+            new_factor.add_value_at_current_assignment(sum_of_vals)
+            return
+        else:
+            current_var = new_scope[0]
+            
+            for value in current_var.domain():
+                current_var.set_assignment(value)
+                sum_out_helper(new_scope[1:], factor, new_factor, var)
+    
+    sum_out_helper(new_scope, f, new_factor, var)
+    return new_factor
+
 
 def normalize(nums):
-    '''take as input a list of number and return a new list of numbers where
+    '''take as input a list of numbers and return a new list of numbers where
     now the numbers sum to 1, i.e., normalize the input numbers'''    
     #IMPLEMENT
+
+    sum_of_nums = float(sum(nums))
+    number_of_nums = len(nums)
+
+    if sum_of_nums == 0:
+        normalized_nums = [0] * number_of_nums
+    else:
+        normalized_nums = [float(num)/sum_of_nums for num in nums]
+    
+    return normalized_nums
 
 ###Orderings
 def min_fill_ordering(Factors, QueryVar):
@@ -442,10 +507,8 @@ def remove_var(var, new_scope, scopes):
         if not var in s:
             new_scopes.append(s)
     new_scopes.append(new_scope)
-    return new_scopes
-            
-        
-###
+    return new_scopes       
+
 def VE(Net, QueryVar, EvidenceVars):
     '''
     Input: Net---a BN object (a Bayes Net)
@@ -467,4 +530,54 @@ def VE(Net, QueryVar, EvidenceVars):
    Pr(A='a'|B=1, C='c') = 0.26
     '''
     #IMPLEMENT
+    # ****
+    
+    factors = Net.factors()
+    evidence_vars = set(EvidenceVars)
 
+    # step 1: for each factor in factors which has a variable var in EvidenceVars, replace its value with the restriction on factor over 
+    for i in range(len(factors)):
+        vars_to_restrict = evidence_vars.intersection(set(factors[i].get_scope()))
+        vars_to_restrict = list(vars_to_restrict)
+        
+        if len(vars_to_restrict) > 0:
+            for var in vars_to_restrict:
+                new_factor = restrict_factor(factors[i], var, var.get_evidence())
+                factors[i] = new_factor
+
+    """ factors_to_remove = []
+
+    for factor in factors:
+        if not factor.get_scope():
+            factors_to_remove.append(Factor) """
+
+    # step 2: eliminate each var z in the remaining vars
+    order_to_remove = min_fill_ordering(factors, QueryVar)
+
+    # compute sum of products
+    for z in order_to_remove:
+        factors_to_multiply = []
+
+        # step 2a: determine the factors whose scope includes z
+        for factor in factors:
+            if z in factor.get_scope():
+                factors_to_multiply.append(factor)
+
+        if len(factors_to_multiply) > 0:
+            product_of_factors = multiply_factors(factors_to_multiply)
+            sum_of_factors = sum_out_variable(product_of_factors, z) # g
+
+            # step 2b: remove the factors which mention z
+            for factor in factors_to_multiply:
+                factors.remove(factor)
+            
+            # and add the new factor g to factors
+            factors.append(sum_of_factors)
+    
+    # step 3: take the product of the remaining factors
+    product_of_factors = multiply_factors(factors)
+
+    # normalize the product to procude Pr(Q|e)
+    prob = normalize(product_of_factors.values)
+
+    return prob
