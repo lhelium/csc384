@@ -1,4 +1,5 @@
-from bnetbase_solved import *
+#from bnetbase_solved import *
+from bnetbase import *
 
 bmi = Variable("BMI", ['~18.5', '~24.0', '~28.0', '<18.5'])
 F1 = Factor("P(bmi)", [bmi])
@@ -162,9 +163,254 @@ medical = BN('Medical Diagnosis',
          [bmi, co, ht, hl, vg, gd, rg, db, ag, ac],
          [F1, F2, F3, F4, F5, F6, F7, F8, F9, F10])
 
-if __name__ == '__main__':
+def printQ2b():
+    ######################## Part b) ########################
+    # HT and HL independent given CO and BMI, but become dependent given AGE
+    
+    print("Show: Given CO and BMI, HT and HL are independent, but given AG, CO, and BMI HT and HL become dependent\n\n")
 
-    for v in [bmi, co, ht, hl, vg, gd, rg, db, ag, ac]:
+    print("********************************* Show P(HT | CO, BMI) = P(HT| HL, CO, BMI) *********************************")
+    for i in ht.domain():
+        for j in co.domain():
+            for k in bmi.domain():
+                ht.set_evidence(i)
+                co.set_evidence(j)
+                bmi.set_evidence(k)
+                Q2a = VE(medical, hl, [co, bmi])
+                Q2b = VE(medical, hl, [ht, co, bmi])
+
+                for num in [0, 1]:
+                    factor1 = Q2a[num]
+                    factor2 = Q2b[num]
+
+                    print("Without V2: {}, With V2: {}".format(factor1, factor2))
+
+    print("\n********************************* Show P(HL | CO, BMI) = P(HL| HT, CO, BMI) *********************************")
+    for i in hl.domain():
+        for j in co.domain():
+            for k in bmi.domain():
+                hl.set_evidence(i)
+                co.set_evidence(j)
+                bmi.set_evidence(k)
+                Q2a = VE(medical, ht, [co, bmi])
+                Q2b = VE(medical, ht, [hl, co, bmi])
+
+                for num in [0, 1]:
+                    factor1 = Q2a[num]
+                    factor2 = Q2b[num]
+
+                    print("Without V1: {}, With V1: {}".format(factor1, factor2))
+    
+    print("\n*********************************Show P(HT | CO, BMI, AG) != P(HT| HL, CO, BMI, AG) *********************************")
+    for i in ht.domain():
+        for j in co.domain():
+            for k in bmi.domain():
+                for l in ag.domain():
+                    ht.set_evidence(i)
+                    co.set_evidence(j)
+                    bmi.set_evidence(k)
+                    ag.set_evidence(l)
+                    Q2a = VE(medical, hl, [co, bmi, ag])
+                    Q2b = VE(medical, hl, [ht, co, bmi, ag])
+
+                    for num in [0, 1]:
+                        factor1 = Q2a[num]
+                        factor2 = Q2b[num]
+
+                        print("Without V2: {}, With V2: {}".format(factor1, factor2))
+
+    print("\n********************************* Show P(HL | CO, BMI, AG) != P(HL| HT, CO, BMI, AG) *********************************")
+    for i in hl.domain():
+        for j in co.domain():
+            for k in bmi.domain():
+                for l in ag.domain():
+                    hl.set_evidence(i)
+                    co.set_evidence(j)
+                    bmi.set_evidence(k)
+                    ag.set_evidence(l)
+                    Q2a = VE(medical, ht, [co, bmi, ag])
+                    Q2b = VE(medical, ht, [hl, co, bmi, ag])
+
+                    for num in [0, 1]:
+                        factor1 = Q2a[num]
+                        factor2 = Q2b[num]
+
+                        print("Without V1: {}, With V1: {}".format(factor1, factor2))
+    
+    return
+
+def printQ2c():
+    ######################## Part c) ########################
+    # P(AC) increases given accumulated evidence items AGE, DB, RE, GD, HT
+    print("Find: Sequence of accumulated evidence items wuch that each additional evidence item increases the probability that V = d for a var V and a value d in V.domain()")
+    print("V = AC | V1 = HT, V2 = GD, V3 = RG, V4 = DB, V5 = AG\n\n")
+    vars = [bmi, co, vg, hl, ht, gd, rg, db, ag, ac]
+    V0 = vars[9]
+    V5 = vars[8]
+    V4 = vars[7]
+    V3 = vars[6]
+    V2 = vars[5]
+    V1 = vars[4]
+
+    values_of_evidence = []
+    probs = []
+    increasing = True
+
+    #for i in V0.domain():
+    for j in V1.domain():
+        for k in V2.domain():
+            for l in V3.domain():
+                for m in V4.domain():
+                    for n in V5.domain():
+                        V1.set_evidence(j)
+                        V2.set_evidence(k)
+                        V3.set_evidence(l)
+                        V4.set_evidence(m)
+                        V5.set_evidence(n)
+
+                        prob_one = VE(medical, V0, [V5])
+                        prob_two = VE(medical, V0, [V5, V4])
+                        prob_three = VE(medical, V0, [V5, V4, V3])
+                        prob_four = VE(medical, V0, [V5, V4, V3, V2])
+                        prob_five = VE(medical, V0, [V5, V4, V3, V2, V1])
+
+                        for item_one, item_two, item_three, item_four, item_five in zip(prob_one, prob_two, prob_three, prob_four, prob_five):
+                            if item_five >= item_four and item_four >= item_three and item_three >= item_two and item_two >= item_one:
+                                temp_tuple = (j, k, l, m, n)
+                                values_of_evidence.append(temp_tuple)
+
+                                prob_tuple = (item_one, item_two, item_three, item_four, item_five)
+                                probs.append(prob_tuple)
+
+    for assignment, prob in zip(values_of_evidence, probs):
+        print("Assignment: {}".format(assignment))
+        print("Probabilities: {}\n".format(prob))
+    
+    return
+
+def new_printQ2c():
+    ######################## Part c) ########################
+    # P(AC) increases given accumulated evidence items AGE, DB, RE, GD, HT
+    print("Find: Sequence of accumulated evidence items wuch that each additional evidence item increases the probability that V = d for a var V and a value d in V.domain()")
+    print("V = AC | V1 = HT, V2 = GD, V3 = RG, V4 = DB, V5 = AG\n\n")
+    vars = [bmi, co, vg, hl, ht, gd, rg, db, ag, ac]
+    V0 = vars[0] # bmi
+    V5 = vars[5] # gd
+    V4 = vars[2] # vg
+    V3 = vars[3] # hl
+    V2 = vars[4] #ht
+    V1 = vars[1] #co
+
+    V1.set_evidence('YES')
+    V2.set_evidence('YES')
+    V3.set_evidence('YES')
+    V4.set_evidence('<400g/d')
+    V5.set_evidence('Male')
+
+    prob_one = VE(medical, V0, [V5])
+    prob_two = VE(medical, V0, [V5, V4])
+    prob_three = VE(medical, V0, [V5, V4, V3])
+    prob_four = VE(medical, V0, [V5, V4, V3, V2])
+    prob_five = VE(medical, V0, [V5, V4, V3, V2, V1])
+
+    print(prob_one)
+    print(prob_two)
+    print(prob_three)
+    print(prob_four)
+    print(prob_five)
+    
+    return
+
+
+
+def printQ2d():
+    ######################## Part d) ########################
+    # P(AC) decreases given accumulated evidence items AGE, DB, RE, GD, HT
+    print("Find: Sequence of accumulated evidence items wuch that each additional evidence item increases the probability that V = d for a var V and a value d in V.domain()")
+    print("V = AC | V1 = HT, V2 = GD, V3 = RG, V4 = DB, V5 = AG\n\n")
+    vars = [bmi, co, vg, hl, ht, gd, rg, db, ag, ac]
+    V0 = vars[9]
+    V5 = vars[8]
+    V4 = vars[7]
+    V3 = vars[6]
+    V2 = vars[5]
+    V1 = vars[4]
+
+    values_of_evidence = []
+    probs = []
+    increasing = True
+
+    #for i in V0.domain():
+    for j in V1.domain():
+        for k in V2.domain():
+            for l in V3.domain():
+                for m in V4.domain():
+                    for n in V5.domain():
+                        V1.set_evidence(j)
+                        V2.set_evidence(k)
+                        V3.set_evidence(l)
+                        V4.set_evidence(m)
+                        V5.set_evidence(n)
+
+                        prob_one = VE(medical, V0, [V5])
+                        prob_two = VE(medical, V0, [V5, V4])
+                        prob_three = VE(medical, V0, [V5, V4, V3])
+                        prob_four = VE(medical, V0, [V5, V4, V3, V2])
+                        prob_five = VE(medical, V0, [V5, V4, V3, V2, V1])
+
+                        for item_one, item_two, item_three, item_four, item_five in zip(prob_one, prob_two, prob_three, prob_four, prob_five):
+                            if item_five <= item_four and item_four <= item_three and item_three <= item_two and item_two <= item_one:
+                                temp_tuple = (j, k, l, m, n)
+                                values_of_evidence.append(temp_tuple)
+
+                                prob_tuple = (item_one, item_two, item_three, item_four, item_five)
+                                probs.append(prob_tuple)
+
+    for assignment, prob in zip(values_of_evidence, probs):
+        print("Assignment: {}".format(assignment))
+        print("Probabilities: {}\n".format(prob))
+    
+    return
+
+def new_printQ2d():
+    ######################## Part c) ########################
+    # P(AC) increases given accumulated evidence items AGE, DB, RE, GD, HT
+    print("Find: Sequence of accumulated evidence items wuch that each additional evidence item decreases the probability that V = d for a var V and a value d in V.domain()")
+    print("V = AC | V1 = HT, V2 = GD, V3 = RG, V4 = DB, V5 = AG\n\n")
+    vars = [bmi, co, vg, hl, ht, gd, rg, db, ag, ac]
+    V0 = vars[4] # ht
+    V5 = vars[9] # ac
+    V4 = vars[2] # vg
+    V3 = vars[8] # ag
+    V2 = vars[0] # bmi
+    V1 = vars[1] #co
+
+    V1.set_evidence('YES')
+    V2.set_evidence('~28.0')
+    V3.set_evidence('~60')
+    V4.set_evidence('<400g/d')
+    V5.set_evidence('Insufficient')
+
+    prob_one = VE(medical, V0, [V5])
+    prob_two = VE(medical, V0, [V5, V4])
+    prob_three = VE(medical, V0, [V5, V4, V3])
+    prob_four = VE(medical, V0, [V5, V4, V3, V2])
+    prob_five = VE(medical, V0, [V5, V4, V3, V2, V1])
+
+    print(prob_one)
+    print(prob_two)
+    print(prob_three)
+    print(prob_four)
+    print(prob_five)
+    
+    return
+
+if __name__ == '__main__':
+    #printQ2b()
+    #new_printQ2c()
+    new_printQ2d()
+
+    """ for v in [bmi, co, ht, hl, vg, gd, rg, db, ag, ac]:
         print("Variable:", v.name)
         probs = VE(medical, v, [])
         doms = v.domain()
@@ -182,7 +428,16 @@ if __name__ == '__main__':
         print(probs1)
         print(probs)
         doms = v.domain()
-        #for i in range(len(probs)):
-        #    for j in range(len(probs)):
-        #        print("P({0:} = {1:}|{0:} = {1:}) = {2:0.1f}".format(v.name, t.name, doms[i], 100*probs[i]))
-        print()
+        for i in range(len(probs)):
+            for j in range(len(probs)):
+                #print("P({0:} = {1:}|{0:} = {1:}) = {2:0.1f}".format(v.name, t.name, doms[i], int(100*probs[i])))
+                print("P({} = {}|{} = {}) = {}".format(v.name, doms[i], t.name, doms[i], 100*probs[i]))
+        print() """
+
+    """ test = ac
+    probs = [
+        VE(medical, test, [ht, ag, gd]), VE(medical, test, [ag, gd]), VE(medical, test, [ht, ag, gd, co]),
+        VE(medical, test, [ag, gd, co]), VE(medical, test, [bmi, ag, gd, hl]), VE(medical, test, [ag, gd, hl])
+    ]
+    for p in probs:
+        print(p) """
