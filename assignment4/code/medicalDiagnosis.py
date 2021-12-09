@@ -163,6 +163,67 @@ medical = BN('Medical Diagnosis',
          [bmi, co, ht, hl, vg, gd, rg, db, ag, ac],
          [F1, F2, F3, F4, F5, F6, F7, F8, F9, F10])
 
+def printQ2a():
+    print("Show: Given HL, VG and BMI are independent, but without HL, VG and BMI are dependent\n\n")
+
+    print("******************** Show P(VG | BMI) != P(VG) * P(BMI) and  Show P(BMI | VG) != P(VG) * P(BMI) ********************")
+
+    for i in vg.domain():
+        for j in bmi.domain():
+            vg.set_evidence(i)
+            bmi.set_evidence(j)
+
+            test1 = VE(medical, vg, [bmi])
+            test1_other_way = VE(medical, bmi, [vg])
+            test2 = VE(medical, vg, [])
+            test3 = VE(medical, bmi, [])
+
+            combined = [x * y for x, y in zip(test2, test3)]
+
+            #print(test1, combined)
+
+            if test1 != combined and test1_other_way != combined:
+                print("Correct!")
+            else:
+                print("INCORRECT")
+
+
+    print("********************************* Show P(VG | HL, BMI) = P(VG| HL) *********************************")
+    for i in vg.domain():
+        for j in hl.domain():
+            for k in bmi.domain():
+                vg.set_evidence(i)
+                hl.set_evidence(j)
+                bmi.set_evidence(k)
+
+                test1 = VE(medical, vg, [hl, bmi])
+                test2 = VE(medical, vg, [hl])
+
+                #print(test1, test2)
+
+                if abs(test1[0] - test2[0]) < 0.0001 and abs(test1[1] - test2[1]) < 0.0001 and abs(test1[2] - test2[2]) < 0.0001:
+                    print("Correct!")
+                else:
+                    print("INCORRECT")
+    
+    print("********************************* Show P(BMI | HL, VG) = P(BMI| HL) *********************************")
+    for i in bmi.domain():
+        for j in hl.domain():
+            for k in vg.domain():
+                bmi.set_evidence(i)
+                hl.set_evidence(j)
+                vg.set_evidence(k)
+
+                test1 = VE(medical, bmi, [hl, vg])
+                test2 = VE(medical, bmi, [hl])
+
+                #print(test1, test2)
+
+                if abs(test1[0] - test2[0]) < 0.0001 and abs(test1[1] - test2[1]) < 0.0001 and abs(test1[2] - test2[2]) < 0.0001 and abs(test1[3] - test2[3]) < 0.0001:
+                    print("Correct!")
+                else:
+                    print("INCORRECT")
+
 def printQ2b():
     ######################## Part b) ########################
     # HT and HL independent given CO and BMI, but become dependent given AGE
@@ -183,7 +244,12 @@ def printQ2b():
                     factor1 = Q2a[num]
                     factor2 = Q2b[num]
 
-                    print("Without V2: {}, With V2: {}".format(factor1, factor2))
+                    if abs(factor1 - factor2) < 0.000001:
+                        print("Correct!")
+                    else:
+                        print("INCORRECT")
+
+                    #print("Without HL: {}, With HL: {}".format(factor1, factor2))
 
     print("\n********************************* Show P(HL | CO, BMI) = P(HL| HT, CO, BMI) *********************************")
     for i in hl.domain():
@@ -199,7 +265,12 @@ def printQ2b():
                     factor1 = Q2a[num]
                     factor2 = Q2b[num]
 
-                    print("Without V1: {}, With V1: {}".format(factor1, factor2))
+                    if abs(factor1 - factor2) < 0.000001:
+                        print("Correct!")
+                    else:
+                        print("INCORRECT")
+
+                    #print("Without HT: {}, With HT: {}".format(factor1, factor2))
     
     print("\n*********************************Show P(HT | CO, BMI, AG) != P(HT| HL, CO, BMI, AG) *********************************")
     for i in ht.domain():
@@ -217,7 +288,12 @@ def printQ2b():
                         factor1 = Q2a[num]
                         factor2 = Q2b[num]
 
-                        print("Without V2: {}, With V2: {}".format(factor1, factor2))
+                        if factor1 != factor2:
+                            print("Correct!")
+                        else:
+                            print("INCORRECT")
+
+                        #print("Without HL: {}, With HL: {}".format(factor1, factor2))
 
     print("\n********************************* Show P(HL | CO, BMI, AG) != P(HL| HT, CO, BMI, AG) *********************************")
     for i in hl.domain():
@@ -235,7 +311,12 @@ def printQ2b():
                         factor1 = Q2a[num]
                         factor2 = Q2b[num]
 
-                        print("Without V1: {}, With V1: {}".format(factor1, factor2))
+                        if factor1 != factor2:
+                            print("Correct!")
+                        else:
+                            print("INCORRECT")
+
+                        #print("Without HT: {}, With HT: {}".format(factor1, factor2))
     
     return
 
@@ -292,7 +373,7 @@ def new_printQ2c():
     ######################## Part c) ########################
     # P(AC) increases given accumulated evidence items AGE, DB, RE, GD, HT
     print("Find: Sequence of accumulated evidence items wuch that each additional evidence item increases the probability that V = d for a var V and a value d in V.domain()")
-    print("V = AC | V1 = HT, V2 = GD, V3 = RG, V4 = DB, V5 = AG\n\n")
+    print("V0 = BMI d0 = ~28 | V1 = CO d1 = YES, V2 = HT d2 = YES, V3 = HL d3 = YES, V4 = VG d4 = <400g/d, V5 = GD d5 = Male\n")
     vars = [bmi, co, vg, hl, ht, gd, rg, db, ag, ac]
     V0 = vars[0] # bmi
     V5 = vars[5] # gd
@@ -313,12 +394,25 @@ def new_printQ2c():
     prob_four = VE(medical, V0, [V5, V4, V3, V2])
     prob_five = VE(medical, V0, [V5, V4, V3, V2, V1])
 
-    print(prob_one)
-    print(prob_two)
-    print(prob_three)
-    print(prob_four)
-    print(prob_five)
+    print("Probability given V5: {}".format(prob_one))
+    print("Probability given V5 and V4: {}".format(prob_two))
+    print("Probability given V5 and V4 and V3: {}".format(prob_three))
+    print("Probability given V5 and V4 and V3 and V2: {}".format(prob_four))
+    print("Probability given V5 and V4 and V3 and V2 and V1: {}".format(prob_five))
     
+    if prob_one[2] < prob_two[2]:
+        if prob_two[2] < prob_three[2]:
+            if prob_three[2] < prob_four[2]:
+                if prob_four[2] < prob_five[2]:
+                    print("Question 2c correct!")
+                else:
+                    print("INCORRECT")
+            else:
+                print("INCORRECT")
+        else:
+            print("INCORRECT")
+    else:
+        print("INCORRECT")
     return
 
 
@@ -373,10 +467,10 @@ def printQ2d():
     return
 
 def new_printQ2d():
-    ######################## Part c) ########################
+    ######################## Part d) ########################
     # P(AC) increases given accumulated evidence items AGE, DB, RE, GD, HT
     print("Find: Sequence of accumulated evidence items wuch that each additional evidence item decreases the probability that V = d for a var V and a value d in V.domain()")
-    print("V = AC | V1 = HT, V2 = GD, V3 = RG, V4 = DB, V5 = AG\n\n")
+    print("V0 = HT, d0 = NO | V1 = CO d1 = YES, V2 = BMI d2 = ~28.0, V3 = AG d3 = ~60, V4 = VG d4 = <400g/d, V5 = AC d5 = Insufficient\n")
     vars = [bmi, co, vg, hl, ht, gd, rg, db, ag, ac]
     V0 = vars[4] # ht
     V5 = vars[9] # ac
@@ -397,17 +491,39 @@ def new_printQ2d():
     prob_four = VE(medical, V0, [V5, V4, V3, V2])
     prob_five = VE(medical, V0, [V5, V4, V3, V2, V1])
 
-    print(prob_one)
-    print(prob_two)
-    print(prob_three)
-    print(prob_four)
-    print(prob_five)
+    print("Probability given V5: {}".format(prob_one))
+    print("Probability given V5 and V4: {}".format(prob_two))
+    print("Probability given V5 and V4 and V3: {}".format(prob_three))
+    print("Probability given V5 and V4 and V3 and V2: {}".format(prob_four))
+    print("Probability given V5 and V4 and V3 and V2 and V1: {}".format(prob_five))
+
+    if prob_one[1] > prob_two[1]:
+        if prob_two[1] > prob_three[1]:
+            if prob_three[1] > prob_four[1]:
+                if prob_four[1] > prob_five[1]:
+                    print("Question 2d correct!")
+                else:
+                    print("INCORRECT")
+            else:
+                print("INCORRECT")
+        else:
+            print("INCORRECT")
+    else:
+        print("INCORRECT")
     
     return
 
 if __name__ == '__main__':
-    #printQ2b()
-    #new_printQ2c()
+    print("\n********************************* Problem 2a *********************************")
+    printQ2a()
+
+    print("\n********************************* Problem 2b *********************************")
+    printQ2b()
+
+    print("\n********************************* Problem 2c *********************************")
+    new_printQ2c()
+
+    print("\n********************************* Problem 2d *********************************")
     new_printQ2d()
 
     """ for v in [bmi, co, ht, hl, vg, gd, rg, db, ag, ac]:
