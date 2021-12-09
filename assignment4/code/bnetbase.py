@@ -389,16 +389,12 @@ def sum_out_variable(f, var):
     '''return a new factor that is the product of the factors in Factors
        followed by the summing out of Var'''
     #IMPLEMENT
-    # ****
-
     new_name = "sum " + f.name + " over variable " + var.name
 
     # scope of new factor = scope of f - variable that you're summing out
     new_scope = list(f.get_scope())
-    new_scope.remove(var) # to avoid removing something that doesn't exist
-    
-    # convert new_scope into a list so we can iterate over it
-    #new_scope = list(new_scope)
+    if var in new_scope:
+        new_scope.remove(var) # to avoid removing something that doesn't exist
 
     new_factor = Factor(new_name, new_scope)
 
@@ -431,7 +427,6 @@ def sum_out_variable(f, var):
     
     sum_out_helper(new_scope, f, new_factor, var)
     return new_factor
-
 
 def normalize(nums):
     '''take as input a list of numbers and return a new list of numbers where
@@ -530,12 +525,11 @@ def VE(Net, QueryVar, EvidenceVars):
    Pr(A='a'|B=1, C='c') = 0.26
     '''
     #IMPLEMENT
-    # ****
     
     factors = Net.factors()
     evidence_vars = set(EvidenceVars)
 
-    # step 1: for each factor in factors which has a variable var in EvidenceVars, replace its value with the restriction on factor over 
+    # step 1: for each factor in factors which has a variable var in EvidenceVars, replace its value with the restriction on the factor over var
     for i in range(len(factors)):
         vars_to_restrict = evidence_vars.intersection(set(factors[i].get_scope()))
         vars_to_restrict = list(vars_to_restrict)
@@ -551,28 +545,28 @@ def VE(Net, QueryVar, EvidenceVars):
         if not factor.get_scope():
             factors_to_remove.append(Factor) """
 
-    # step 2: eliminate each var z in the remaining vars
+    # step 2 prep: find the order in which to eliminate each var z in the remaining vars
     order_to_remove = min_fill_ordering(factors, QueryVar)
 
     # compute sum of products
     for z in order_to_remove:
-        factors_to_multiply = []
+        factors_mentioning_z = []
 
         # step 2a: determine the factors whose scope includes z
         for factor in factors:
             if z in factor.get_scope():
-                factors_to_multiply.append(factor)
+                factors_mentioning_z.append(factor)
 
-        if len(factors_to_multiply) > 0:
-            product_of_factors = multiply_factors(factors_to_multiply)
-            sum_of_factors = sum_out_variable(product_of_factors, z) # g
+        if len(factors_mentioning_z) > 0:
+            product_of_factors = multiply_factors(factors_mentioning_z)
+            g = sum_out_variable(product_of_factors, z)
 
             # step 2b: remove the factors which mention z
-            for factor in factors_to_multiply:
+            for factor in factors_mentioning_z:
                 factors.remove(factor)
             
             # and add the new factor g to factors
-            factors.append(sum_of_factors)
+            factors.append(g)
     
     # step 3: take the product of the remaining factors
     product_of_factors = multiply_factors(factors)
